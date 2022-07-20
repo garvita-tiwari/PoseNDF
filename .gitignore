@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 *.sh
+data/old_exp/*
+data/prepare_data.py   #MPI cluster code
