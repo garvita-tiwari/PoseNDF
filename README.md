@@ -1,0 +1,86 @@
+
+
+
+## Pose-NDF: Modeling Human Pose Manifolds with Neural Distance Fields
+ 
+This repository contains official implementation of ECCV-2022 paper: Pose-NDF: Modeling Human Pose Manifolds with Neural Distance Fields ([Project Page](https://virtualhumans.mpi-inf.mpg.de/posendf/))
+
+<p align="center">
+
+  <img alt="org_scan" src="images/teaser.png" width="80%">
+</p>
+
+
+
+### Installation and Datafiles:
+    Check INSTALL.MD
+
+
+## Training and Dataset
+
+#### 1. Download AMASS: Store in a folder "amass_raw"". You can train the model for SMPL/SMPL+H or SMPL+X. 
+    https://amass.is.tue.mpg.de/ 
+
+#### 2. Edit configs/<>.yaml for different experimental setup
+    experiment:
+        body_model: smpl/smplh/smplx
+        root_dir: directory for training data/models and results
+    model:     #Network acrhitecture
+        ......
+    training:  #Training parameters
+        ......
+    data:       #Training sample details
+        .......
+
+Root directory will contain dataset, trained models and results. 
+
+#### 3. Create training data using :
+     python data/samples_poses.py --amass_raw=<amass_raw/> --amass_out=<data_dir>
+sample_poses.py is based on [VPoser data preparation](https://github.com/nghorbani/human_body_prior/tree/master/src/human_body_prior/data). If you already have this processed data, you can directly use it. You just need to convert .pt file to .npz file. During training the dataloader reads file form data_dir/. You can now delete the amass_raw directory. 
+For all our experiments, we use the same settings as used in VPoser data preparation step.
+
+#### 4. Training Pose-NDF :
+    python trainer.py --config=configs/amass.yaml
+
+amass.yaml contains the configs used for the pretrained model. 
+
+#### 4. Download pre-trained model :
+    Coming soon
+
+
+
+## Inference 
+
+Pose-NDF is a continuous model for plausible human poses based on neural distance fields (NDFs). This can be used to project non-manifold points on the learned manifold and hence act as prior for downstream tasks.
+
+
+### Pose generation
+    python generator.py --config=configs/amass.yaml 
+
+This code randomly samples points in input pose space and project them on the learned manifold to generate realsitic poses. 
+
+### Pose interpolation
+     python experiment/interp.py --config=configs/amass.yaml 
+
+
+### Motion denoising
+     python experiment/motion_denoise.py --config=configs/amass.yaml  --motion_data=<motion data file>
+
+Motion data file is .npz file which contains "body_pose", "betas", "root_orient"
+
+### Image based 3d pose estimation
+     1. Run openpose to generate 2d keypoints for given image(https://github.com/CMU-Perceptual-Computing-Lab/openpose).
+     2. python experiment/image_pose.py --config=configs/amass.yaml  --image_dir=<image data dir>
+
+
+Both image and corresponding keypoint should be in same directory with <image_name>.jpg and <image_name>.json being the image and 2d keypoints file respectively.
+
+
+### Citation:
+    @inproceedings{tiwari22posendf,
+        title = {Pose-NDF: Modeling Human Pose Manifolds with Neural Distance Fields},
+        author = {Tiwari, Garvita and Antic, Dimitrije and Lenssen, Jan Eric and Sarafianos, Nikolaos and Tung, Tony and Pons-Moll, Gerard},
+        booktitle = {European Conference on Computer Vision ({ECCV})},
+        month = {October},
+        year = {2022},
+        }
