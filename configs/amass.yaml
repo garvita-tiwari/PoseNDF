@@ -1,5 +1,5 @@
 data:
-  data_dir: /BS/humanpose/static00/data/PoseNDF_raw/smpl_h # Training data directory
+  data_dir: ./posendf_data/ # Training data directory
   sample_pt: 100000
   dc: dc
 #  sample_distribution: [0.4, 0.2, 0.1, 0.1,  0.1, 0.1] #, 0.025, 0.05, 0.05, 0.05]
@@ -10,9 +10,9 @@ data:
   sample_sigmas: [ 0.0, 0.001]
 experiment:
   bodymodel: smpl
-  root_dir: /BS/garvita4/static00/pose_manifold/amass # Where to save checkpoints and final trained model_quat #todo
-  data_name: PoseData
-  type: BaseTrainer
+  root_dir: ./posendf_model/ # Where to save checkpoints and final trained model_quat #todo
+  data_name: PoseNDFdata
+  type: PoseNDF_Trainer
   inp_name: xyz
 model:
   PosEnc: PosEnc
@@ -32,7 +32,7 @@ model:
     out_dim: 6
     in_dim: 84
     num_parts: 24
-    pose_enc: False #todo
+    pose_enc: False 
     num_layers: 2
     ff_enc: False
     act: lrelu
