@@ -23,7 +23,6 @@ def main(args):
         for amass_data in amass_datas:
             ds_dir = os.path.join(args.raw_data,amass_data)
             seqs = sorted(os.listdir(ds_dir))
-
             for seq in seqs:
                 if not 'npz' in seq:
                     continue
@@ -34,6 +33,7 @@ def main(args):
                      "& \n")
                 count += 1
                 fp.write("\t\t\t;;\n")
+        print(count)
 
 
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # Paths to output files
     parser.add_argument("-rd", "--raw_data", type=str, default="/BS/humanpose/static00/data/PoseNDF_raw/smpl_h",
                         help="Path to the resulting image")
-    parser.add_argument("-op", "--out_path", type=str, default="/BS/humanpose/static00/experiments/humor/results/out/amass_noise_0.5_60/results_vis",
+    parser.add_argument("-op", "--out_path", type=str, default="/BS/humanpose/static00/data/PoseNDF_train/smpl_h",
                         help="Path to the resulting image")
     parser.add_argument("-bf", "--bash_file", type=str, default="./renderings.sh",
                         help="Path to the bash script file")

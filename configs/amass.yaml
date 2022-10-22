@@ -38,6 +38,8 @@ model:
     act: lrelu
     beta: 100
 train:
+  val: False
+  test: False
   pde: False
   device: cuda
   batch_size: 1024

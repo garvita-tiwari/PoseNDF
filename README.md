@@ -21,7 +21,17 @@ This repository contains official implementation of ECCV-2022 paper: Pose-NDF: M
 #### 1. Download AMASS: Store in a folder "amass_raw"". You can train the model for SMPL/SMPL+H or SMPL+X. 
     https://amass.is.tue.mpg.de/ 
 
-#### 2. Edit configs/<>.yaml for different experimental setup
+
+#### 2.1 Sample poses from AMASS:
+     python data/prepare_data.py --amass_raw=<amass_raw/> --amass_out=<data_dir>
+
+sample_poses.py is based on [VPoser data preparation](https://github.com/nghorbani/human_body_prior/tree/master/src/human_body_prior/data). If you already have this processed data, you can directly use it. You just need to convert .pt file to .npz file. 
+#### 2.2 Create training data using :
+     python data/samples_poses.py --amass_raw=<amass_raw/> --amass_out=<data_dir>
+During training the dataloader reads file form data_dir/. You can now delete the amass_raw directory. 
+For all our experiments, we use the same settings as used in VPoser data preparation step.
+
+#### 3. Edit configs/<>.yaml for different experimental setup
     experiment:
         body_model: smpl/smplh/smplx
         root_dir: directory for training data/models and results
@@ -33,11 +43,6 @@ This repository contains official implementation of ECCV-2022 paper: Pose-NDF: M
         .......
 
 Root directory will contain dataset, trained models and results. 
-
-#### 3. Create training data using :
-     python data/samples_poses.py --amass_raw=<amass_raw/> --amass_out=<data_dir>
-sample_poses.py is based on [VPoser data preparation](https://github.com/nghorbani/human_body_prior/tree/master/src/human_body_prior/data). If you already have this processed data, you can directly use it. You just need to convert .pt file to .npz file. During training the dataloader reads file form data_dir/. You can now delete the amass_raw directory. 
-For all our experiments, we use the same settings as used in VPoser data preparation step.
 
 #### 4. Training Pose-NDF :
     python trainer.py --config=configs/amass.yaml

@@ -9,12 +9,12 @@ from pytorch3d.transforms import axis_angle_to_quaternion, axis_angle_to_matrix,
 class PoseData(Dataset):
 
 
-    def __init__(self, mode, data_path, amass_splits, batch_size=1024, num_workers=3):
+    def __init__(self, mode, data_path, amass_splits, batch_size=1024, num_workers=3, sigma=0.01):
 
 
         self.path = data_path
         self.datasets= amass_splits
-
+        self.sigma = sigma
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.load_datasets()
@@ -34,7 +34,7 @@ class PoseData(Dataset):
     def __getitem__(self, idx):
 
 
-        poses = self.pose[idx] + np.random.rand(21,4)
+        poses = self.pose[idx] + self.sigma*np.random.rand(21,4)
 
         betas = np.zeros(10)
 

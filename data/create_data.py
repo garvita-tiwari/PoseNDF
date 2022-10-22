@@ -42,7 +42,7 @@ class PoseData(Dataset):
         self.mode = mode
         self.sigma = [0.01, 0.05, 0.1, 0.25, 0.5]
         self.num_samples = num_samples
-        self.all_files = [os.path.join(self.path, '{}_{:04}.npz'.format(self.mode, idx)) for idx in range(376) if os.path.exists(os.path.join(self.path, '{}_{:04}.npz'.format(self.mode, idx))) ]
+        # self.all_files = [os.path.join(self.path, '{}_{:04}.npz'.format(self.mode, idx)) for idx in range(376) if os.path.exists(os.path.join(self.path, '{}_{:04}.npz'.format(self.mode, idx))) ]
 
 
     def create_smpl(self, pose_in):
@@ -112,7 +112,7 @@ def sample_poses(root_dir, mode='train'):
             tmp+= data.size
             print('cumulative....', tmp)
             data_val = np.load(os.path.join(ds_dir, seq))['pose_body']
-            all_pose.extend(data_val.reshape(len(data_val, 21, 3)))
+            all_pose.extend(data_val.reshape(len(data_val), 21, 3))
     print('total size....', tmp)
     ipdb.set_trace()
     data_all = np.array(all_pose)

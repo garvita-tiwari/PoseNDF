@@ -16,9 +16,11 @@ import dist_utils
 
 def faiss_idx_np(amass_datas, root_dir):
     all_pose = []
+    print(len(amass_datas))
     for amass_data in amass_datas:
         ds_dir = os.path.join(root_dir,amass_data)
         seqs = sorted(os.listdir(ds_dir))
+        print(amass_data, len(seqs))
 
 
         for seq in seqs:
@@ -33,7 +35,7 @@ def faiss_idx_np(amass_datas, root_dir):
             # all_pose.extend(data_val.reshape(len(data_val), 84))
             data_val = quat_doublecover(data_val,samples=int(len(data_val)/10) )  #Todo: add a condition for double cover
             all_pose.extend(data_val.reshape(len(data_val), 84))
-            print(seq)
+            # print(seq)
     # print('total size....', tmp)
     data_all = np.array(all_pose)
     # index = faiss.index_factory(84, "Flat",faiss.METRIC_INNER_PRODUCT)
@@ -115,12 +117,15 @@ def main(args):
 
         #for every query pose fine knn using faiss and then calculate exact enighbous using custom distance
         distances, neighbors = faiss_model.search(inp_pose, k_faiss)
+        ipdb.set_trace()
 
         nn_poses = data_all[neighbors].reshape(len(quer_pose), k_faiss, 21,4)
         if args.data_type == 'np':
             nn_poses =  torch.from_numpy(nn_poses).to(device=device)
 
         dist, nn_id = distance_calculator.dist_calc(quer_pose,nn_poses, k_faiss, k_dist)
+        ipdb.set_trace()
+
         nn_id = nn_id.detach().cpu().numpy()
         nn_poses = nn_poses.detach().cpu().numpy()
         nn_pose = []

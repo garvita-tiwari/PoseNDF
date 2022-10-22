@@ -4,3 +4,4 @@ __pycache__/
 *.sh
 data/old_exp/*
 data/prepare_data.py   #MPI cluster code
+data/renderings.sh   #MPI cluster code
