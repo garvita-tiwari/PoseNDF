@@ -3,8 +3,7 @@ from configs.config import load_config
 # General config
 
 #from model_quat import  train_manifold2 as train_manifold
-from model import train_posendf  as PoseNDF_trainer
-from model import load_data
+from model.train_posendf import PoseNDF_trainer
 import shutil
 from data.data_splits import amass_splits
 

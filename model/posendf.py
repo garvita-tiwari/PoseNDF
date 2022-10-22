@@ -8,8 +8,7 @@ import numpy as np
 import torch.nn as nn
 import ipdb
 #todo: create a base trainer
-from models.network.net_modules import  ShapeNet, PoseNet, WeightNet
-from models.network.net_utils import net_arch, old_class
+from model.network.net_modules import  StructureEncoder, DFNet
 
 import time
 import pickle as pkl
@@ -21,15 +20,14 @@ class PoseNDF(torch.nn.Module):
 
         self.device = opt['train']['device']
 
-        # get model parameters based on garment layer and smpl resolution
-        in_dim, hidden_layers, out_dim, layer_size = net_arch(opt['experiment'])
-        self.num_neigh = opt['experiment']['num_neigh']
-        self.layer_size = layer_size
-        self.batch_size = opt['train']['batch_size']
         # create all the models:
         # self.shape_model = ShapeNet().to(self.device)
         # self.pose_model = PoseNet().to(self.device)
-        self.weight_net = WeightNet(in_dim, hidden_layers, out_dim).to(self.device)
+        self.enc = None
+        if opt['model']['StrEnc']['use']:
+            self.enc = StructureEncoder(opt['model']['StrEnc']).to(self.device)
+
+        self.dfnet = DFNet(opt['model']['DFNet']).to(self.device)
         
         
         #geo_weights = np.load(os.path.join(DATA_DIR, 'real_g5_geo_weights.npy'))  todo: do we need this???

@@ -1,7 +1,6 @@
 from __future__ import division
 from model.posendf import PoseNDF
 import torch
-import torch.optim as optim
 import os
 from torch.utils.tensorboard import SummaryWriter
 from glob import glob
@@ -9,25 +8,26 @@ import numpy as np
 import torch.nn as nn
 from model.network.net_utils import gradient
 import ipdb
-from model.load_data import PoseNDFdata
-
+from model.load_data import PoseData
+from model.loss_utils import AverageMeter
 import shutil
 class PoseNDF_trainer(object):
 
     def __init__(self, opt):
 
         self.device = opt['train']['device']
-        self.enc_name = opt['train']['enc']
-
-        self.train_dataset = PoseNDFdata('train', data_root=opt['data']['data_dir'], split_file=opt['data']['split_file'], batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'], garment_data= opt['experiment'])
-        self.val_dataset = PoseNDFdata('val', data_root=opt['data']['data_dir'], split_file=opt['data']['split_file'], batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'], garment_data= opt['experiment'])
+        self.enc_name = 'Raw'
+        if opt['model']['StrEnc']['use']:
+            self.enc_name = opt['model']['StrEnc']['name']
+        self.train_dataset = PoseData('train', data_path=opt['data']['data_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'])
+        self.val_dataset = PoseData('train', data_path=opt['data']['data_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'])
         self.train_dataset  = self.train_dataset.get_loader()
         self.val_dataset  = self.val_dataset.get_loader()
         # create all the models and dataloader:
         self.learning_rate = opt['train']['optimizer_param']
         self.model = PoseNDF(opt).to(self.device)
         self.optimizer = torch.optim.Adam( self.model.parameters(), lr=self.learning_rate)
-
+        ipdb.set_trace()
         ##create smpl layer
         self.init_net(opt)
         self.ep = 0
@@ -45,9 +45,10 @@ class PoseNDF_trainer(object):
         #create exp name based on experiment params
         self.loss_weight = {'man_loss': 0, 'dist': 1.0, 'eikonal': 0}
        
-        self.exp_name = opt['model']['CanSDF']['enc']
+        self.exp_name = opt['experiment']['exp_name']
+        self.loss = opt['train']['loss_type']
 
-        self.exp_name = '{}_{}_{}_{}'.format(self.exp_name,  opt['model']['CanSDF']['act'],self.loss,  opt['train']['optimizer_param'])
+        self.exp_name = '{}_{}_{}_{}'.format(self.exp_name,  opt['model']['DFNet']['act'],self.loss,  opt['train']['optimizer_param'])
         self.exp_path = '{}/{}/'.format( opt['experiment']['root_dir'],self.exp_name )
         self.checkpoint_path = self.exp_path + 'checkpoints/'
         if not os.path.exists(self.checkpoint_path):

@@ -5,15 +5,14 @@ import numpy as np
 import torch
 import ipdb
 from pytorch3d.transforms import axis_angle_to_quaternion, axis_angle_to_matrix, matrix_to_rotation_6d
-
+from data.data_splits import amass_splits
 class PoseData(Dataset):
 
 
-    def __init__(self, mode, data_path, amass_splits, batch_size=1024, num_workers=3, sigma=0.01):
+    def __init__(self, mode, data_path,batch_size=1024, num_workers=3, sigma=0.01):
 
-
+        self.mode= mode
         self.path = data_path
-        self.datasets= amass_splits
         self.sigma = sigma
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -21,7 +20,7 @@ class PoseData(Dataset):
 
     def load_datasets(self):
         pose_arr = []
-        for dset_name in self.datasets[:1]:
+        for dset_name in amass_splits[self.mode][:1]:
             npz_fnames = sorted(os.listdir(os.path.join(self.path, dset_name)))
             for npz_fname in npz_fnames[:1]:
                 pose_data = np.load(os.path.join(self.path,dset_name, npz_fname))['pose_body']
