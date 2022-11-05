@@ -1,0 +1,23 @@
+# This file may be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+# platform: linux-64
+
+open3d-python=0.3.0.0=pypi_0
+opencv-python=4.5.5.62=pypi_0
+psbody-mesh=0.3=pypi_0
+python=3.8.12=h12debd9_0
+python-dateutil=2.8.2=pypi_0
+python_abi=3.8=2_cp38
+pytorch=1.7.1=py3.8_cuda10.2.89_cudnn7.6.5_0
+scikit-image=0.18.3=pypi_0
+scikit-learn=1.0.2=pypi_0
+scipy=1.2.2=pypi_0
+sklearn=0.0=pypi_0
+smplx=0.1.28=pypi_0
+tensorboard=2.7.0=pypi_0
+tensorboardx=2.4.1=pypi_0
+torchgeometry=0.1.2=pypi_0
+torchvision=0.8.2=cpu_py38ha229d99_0
+tqdm=4.62.3=pyhd8ed1ab_0
+trimesh=3.9.35=pypi_0
+
