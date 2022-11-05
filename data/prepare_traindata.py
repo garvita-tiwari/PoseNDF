@@ -17,13 +17,13 @@ import dist_utils
 def faiss_idx_np(amass_datas, root_dir):
     all_pose = []
     print(len(amass_datas))
-    for amass_data in amass_datas:
+    for amass_data in amass_datas[:2]:
         ds_dir = os.path.join(root_dir,amass_data)
         seqs = sorted(os.listdir(ds_dir))
         print(amass_data, len(seqs))
 
 
-        for seq in seqs:
+        for seq in seqs[:2]:
             if not 'npz' in seq:
                 continue
             # data = np.memmap(os.path.join(ds_dir, seq))
@@ -172,7 +172,7 @@ def main(args):
     # #do index select
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Blendify example 02: Render mesh with albedo and depth.")
+    parser = argparse.ArgumentParser(description="Preparing pose and distance paired data for training PoseNDF")
 
     # Paths to output files
     parser.add_argument("-rd", "--raw_data", type=str, default="/BS/humanpose/static00/data/PoseNDF_raw/smpl_h",

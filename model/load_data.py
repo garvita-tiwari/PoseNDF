@@ -6,7 +6,56 @@ import torch
 import ipdb
 from pytorch3d.transforms import axis_angle_to_quaternion, axis_angle_to_matrix, matrix_to_rotation_6d
 from data.data_splits import amass_splits
+import glob
 class PoseData(Dataset):
+
+
+    def __init__(self, mode, data_path,batch_size=1024, num_workers=3, sigma=0.01):
+
+        self.mode= mode
+        self.path = data_path
+        self.sigma = sigma
+        self.data_samples = amass_splits[self.mode]
+        self.data_files = glob.glob(self.path+ '/*/*.npz')
+        self.data_files = [ds for ds in self.data_files if ds.split('/')[-2] in self.data_samples]
+        
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+    def __len__(self):
+        return len(self.data_files)
+
+    def __getitem__(self, idx):
+
+        """read pose and distance data"""
+        pose_data = np.load(self.data_files[idx])
+        poses = pose_data['pose']
+        dist = pose_data['dist']
+        nn_pose = pose_data['nn_pose']
+
+        betas = np.zeros(10)
+
+
+        return {'pose': np.array(poses, dtype=np.float32),
+                'dist': np.array(dist, dtype=np.float32),
+                'nn_pose': np.array(nn_pose, dtype=np.float32),
+                'betas': np.array(betas, dtype=np.float32)}
+
+    def get_loader(self, shuffle =True):
+
+        return torch.utils.data.DataLoader(
+                self, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=shuffle,
+                worker_init_fn=self.worker_init_fn, drop_last=True)
+
+    def worker_init_fn(self, worker_id):
+        random_data = os.urandom(4)
+        base_seed = int.from_bytes(random_data, byteorder="big")
+        np.random.seed(base_seed + worker_id)
+
+
+
+class PoseData_online(Dataset):
+    """not used"""
 
 
     def __init__(self, mode, data_path,batch_size=1024, num_workers=3, sigma=0.01):

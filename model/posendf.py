@@ -44,6 +44,7 @@ class PoseNDF(torch.nn.Module):
 
 
     def compute_distance(self, rand_pose):
+        """online data generation, not used"""
         rand_pose = rand_pose.unsqueeze(1).repeat(1, len(self.train_poses),1,1)
         train_pose = self.train_poses.unsqueeze(0).repeat( len(rand_pose),1, 1,1)
         dist = torch.sum(torch.arccos(torch.sum(rand_pose*train_pose,dim=3)),dim=2)/2.0  #ToDo: replace with weighted sum, why sqrt??, refer to eq2
@@ -52,10 +53,12 @@ class PoseNDF(torch.nn.Module):
 
     def forward(self, inputs ):
         pose = inputs['pose'].to(device=self.device)
-        rand_pose = torch.nn.functional.normalize(pose.to(device=self.device),dim=2)
-        dist = self.compute_distance(rand_pose)
-        dist_pred = self.model_occ(rand_pose.reshape(self.batch_size,84))
-        loss = self.loss_l1(dist_pred[:,0], dist)
+        dist_gt = inputs['dist'].to(device=self.device)
+        rand_pose_in = torch.nn.functional.normalize(pose.to(device=self.device),dim=2)
+        if self.enc:
+            rand_pose_in = self.enc(rand_pose_in.reshape(self.batch_size,84))
+        dist_pred = self.dfnet(rand_pose_in.reshape(self.batch_size,84))
+        loss = self.loss_l1(dist_pred[:,0], dist_gt)
         return loss, {'dist': loss }
 
 
