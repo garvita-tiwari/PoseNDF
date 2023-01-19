@@ -27,8 +27,9 @@ class PoseNDF_trainer(object):
         self.learning_rate = opt['train']['optimizer_param']
         self.model = PoseNDF(opt).to(self.device)
         self.optimizer = torch.optim.Adam( self.model.parameters(), lr=self.learning_rate)
-        ipdb.set_trace()
-        ##create smpl layer
+        self.batch_size= opt['train']['batch_size']
+
+        ##initialise the network
         self.init_net(opt)
         self.ep = 0
         self.val_min = 10000.
@@ -81,7 +82,7 @@ class PoseNDF_trainer(object):
         
         for i, inputs in enumerate(self.train_dataset):
             self.optimizer.zero_grad()
-            loss_dict, _ = self.model(inputs)
+            _, loss_dict = self.model(inputs)
             loss = 0.0
             for k in loss_dict.keys():
                 loss += self.loss_weight[k]*loss_dict[k]
@@ -93,7 +94,7 @@ class PoseNDF_trainer(object):
         for k in loss_dict.keys():
             self.writer.add_scalar("train/loss_{}".format(k), loss_dict[k].item(), self.iter_nums )
         self.writer.add_scalar("train/epoch", epoch_loss.avg, ep)
-        # self.save_checkpoint(ep)
+        self.save_checkpoint(ep)
         return loss.item(),epoch_loss.avg
     
     def inference(self, epoch, eval=True):

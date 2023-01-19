@@ -1,10 +1,14 @@
 """Sample poses from AMASS dataset for training
-This is based(almost copied) on data preparation of VPoser training"""
+This is based(copied) on data preparation of VPoser training
+ python data/sample_poses.py --sampled_pose_dir <path_for_samples_amass_poses> --amass_dir <amass_dataset_dir>
+
+ python data/sample_poses.py --sampled_pose_dir /BS/humanpose/static00/data/PoseNDF_raw/smpl_h --amass_dir /BS/humanpose/static00/AMASS/smpl_h
+ """
 
 
 import os
 import numpy as np
-
+import argparse
 
 def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, mode='train'):
     keep_rate = 0.3
@@ -44,7 +48,6 @@ def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, mode='t
                 pose_body.extend(fullpose[:, 3:66])
                 # betas_all.extend(betas)
                 root_orient.extend(fullpose[:, :3])
-                # ipdb.set_trace()
 
             np.savez(out_path, pose_body=np.array(pose_body), root_orient= np.array(root_orient), betas=np.array(betas))
             print(mode, amass_data, seq, len(root_orient))
@@ -53,9 +56,15 @@ def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, mode='t
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(
+        description='Sample distinct poses from dataset .'
+    )
+    parser.add_argument('--sampled_pose_dir', '-d', type=str, help='Path to data directory(where you want to save sampled poses).')
+    parser.add_argument('--amass_dir', '-a', type=str, help='Path to AMASS dataset.')
+    args = parser.parse_args()
     from data.data_splits import amass_splits
 
-    posendf_data_dir = '/BS/humanpose/static00/data/PoseNDF_raw/smpl_h'
-    amass_dir = '/BS/garvita4/static00/AMASS/smpl_h'
-
+    posendf_data_dir = args.sampled_pose_dir
+    amass_dir = args.amass_dir
+    
     prepare_vposer_datasets(posendf_data_dir, amass_splits, amass_dir, mode='vald')

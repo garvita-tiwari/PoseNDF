@@ -49,11 +49,11 @@ class PoseData(Dataset):
         pass
 
     def __len__(self):
-
-        if self.mode == 'ref':
-            return 1
-        else:
-            return len(self.sigma)
+        return 1
+        # if self.mode == 'ref':
+        #     return 1
+        # else:
+        #     return len(self.sigma)
 
     def __getitem__(self, idx):
 

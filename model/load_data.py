@@ -10,15 +10,15 @@ import glob
 class PoseData(Dataset):
 
 
-    def __init__(self, mode, data_path,batch_size=1024, num_workers=3, sigma=0.01):
+    def __init__(self, mode, data_path,batch_size=4, num_workers=3, num_pts=5000):
 
         self.mode= mode
         self.path = data_path
-        self.sigma = sigma
+        self.num_pts = num_pts
         self.data_samples = amass_splits[self.mode]
         self.data_files = glob.glob(self.path+ '/*/*.npz')
         self.data_files = [ds for ds in self.data_files if ds.split('/')[-2] in self.data_samples]
-        
+
         self.batch_size = batch_size
         self.num_workers = num_workers
 
@@ -29,9 +29,12 @@ class PoseData(Dataset):
 
         """read pose and distance data"""
         pose_data = np.load(self.data_files[idx])
-        poses = pose_data['pose']
-        dist = pose_data['dist']
-        nn_pose = pose_data['nn_pose']
+
+        # sample poses from this file 
+        subsample_indices = np.random.randint(0, len(pose_data['pose']), self.num_pts)
+        poses = pose_data['pose'][subsample_indices]
+        dist = np.mean(pose_data['dist'][subsample_indices],axis=1)
+        nn_pose = pose_data['nn_pose'][subsample_indices]
 
         betas = np.zeros(10)
 

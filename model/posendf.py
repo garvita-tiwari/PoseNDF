@@ -32,6 +32,8 @@ class PoseNDF(torch.nn.Module):
         
         #geo_weights = np.load(os.path.join(DATA_DIR, 'real_g5_geo_weights.npy'))  todo: do we need this???
         self.loss = opt['train']['loss_type']
+        self.batch_size= opt['train']['batch_size']
+
 
         if self.loss == 'l1':
             self.loss_l1 = torch.nn.L1Loss()
@@ -52,12 +54,12 @@ class PoseNDF(torch.nn.Module):
         return dist_vals
 
     def forward(self, inputs ):
-        pose = inputs['pose'].to(device=self.device)
-        dist_gt = inputs['dist'].to(device=self.device)
-        rand_pose_in = torch.nn.functional.normalize(pose.to(device=self.device),dim=2)
+        pose = inputs['pose'].to(device=self.device).reshape(-1,21,4)
+        dist_gt = inputs['dist'].to(device=self.device).reshape(-1)
+        rand_pose_in = torch.nn.functional.normalize(pose.to(device=self.device),dim=1)
         if self.enc:
-            rand_pose_in = self.enc(rand_pose_in.reshape(self.batch_size,84))
-        dist_pred = self.dfnet(rand_pose_in.reshape(self.batch_size,84))
+            rand_pose_in = self.enc(rand_pose_in)
+        dist_pred = self.dfnet(rand_pose_in)
         loss = self.loss_l1(dist_pred[:,0], dist_gt)
         return loss, {'dist': loss }
 

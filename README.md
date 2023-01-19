@@ -12,22 +12,30 @@ This repository contains official implementation of ECCV-2022 paper: Pose-NDF: M
 
 
 
-### Installation and Datafiles:
-    Check INSTALL.MD
+## Installation: 
+Please follow [INSTALL.md](INSTALL.md)
 
 
 ## Training and Dataset
 
 #### 1. Download AMASS: Store in a folder "amass_raw"". You can train the model for SMPL/SMPL+H or SMPL+X. 
-    https://amass.is.tue.mpg.de/ 
+    https://amass.is.tue.mpg.de/
 
 
 #### 2.1 Sample poses from AMASS:
-     python data/samples_poses.py --amass_raw=<amass_raw/> --amass_out=<data_dir>
+    python data/sample_poses.py --sampled_pose_dir <path_for_samples_amass_poses> --amass_dir <amass_dataset_dir>
+
 
 sample_poses.py is based on [VPoser data preparation](https://github.com/nghorbani/human_body_prior/tree/master/src/human_body_prior/data). If you already have this processed data, you can directly use it. You just need to convert .pt file to .npz file. 
-#### 2.2 Create training data using :
-     python data/prepare_data.py --amass_raw=<amass_raw/> --amass_out=<data_dir>
+
+#### 2.2 Create script for generating training data :
+    python data/prepare_data.py --raw_data <path_for_samples_amass_poses> --out_path <path_for_training_data> --bash_file ./traindata.sh 
+
+If you are using slurm then add "--use_slurm" and change please change the path on environment and machine specs in L24:L30 in data/prepare_data.py
+
+#### 2.3 Create  training data :
+    ./traindata.sh 
+
 
 During training the dataloader reads file form data_dir/. You can now delete the amass_raw directory. 
 For all our experiments, we use the same settings as used in VPoser data preparation step.

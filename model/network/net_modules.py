@@ -98,12 +98,11 @@ class StructureEncoder(nn.Module):
     def forward(self, quat):
         """
         Args:
-            pose: B x num_joints x 3 x 3
+            pose: B x num_joints x 4
             rel_joints: B x num_joints x 3
         """
-        B = quat.shape[0]* quat.shape[1]
-        quat = quat.reshape(B, 21, 4)
-
+        B = quat.shape[0]
+        # quat = quat.reshape(B, 21, 4)
 
         # B, K = rel_joints.shape[0], rel_joints.shape[1]
         # bone_lengths = torch.norm(rel_joints.squeeze(-1), dim=-1).view(B, K, 1)  # B x num_joints x 1
