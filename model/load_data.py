@@ -18,7 +18,6 @@ class PoseData(Dataset):
         self.data_samples = amass_splits[self.mode]
         self.data_files = glob.glob(self.path+ '/*/*.npz')
         self.data_files = [ds for ds in self.data_files if ds.split('/')[-2] in self.data_samples]
-
         self.batch_size = batch_size
         self.num_workers = num_workers
 

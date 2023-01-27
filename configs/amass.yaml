@@ -10,39 +10,41 @@ data:
   sample_sigmas: [ 0.0, 0.001]
 experiment:
   bodymodel: smpl
-  root_dir: ./posendf_model/ # Where to save checkpoints and final trained model_quat #todo
-  data_name: PoseNDFdata
-  type: PoseNDF_Trainer
+  root_dir: /BS/humanpose/static00/pose_manifold/amass # Where to save checkpoints and final trained model_quat #todo
+  data_name: PoseData
+  type: BaseTrainer
   inp_name: xyz
+  exp_name: main
+  num_part: 21
+  val: False
+  test: False
+
 model:
-  PosEnc: PosEnc
-  CanSDF:
-    name: 'SDF'
+  DFNet:
+    name: 'DFNet'
     total_dim: 960
-    in_dim: 84
+    in_dim: 126
     num_parts: 21
     num_layers: 5
     ff_enc: False
-    dims: [ 512, 512, 512, 512, 512, 512, 512 ]
+    dims: [ 256, 512, 1024, 512, 256, 64 ]
     act: lrelu
     beta: 100
   StrEnc:
-    use: False
+    use: True
     name: 'StructureEncoder'
     out_dim: 6
     in_dim: 84
-    num_parts: 24
-    pose_enc: False 
+    num_part: 21
+    pose_enc: False #todo
     num_layers: 2
     ff_enc: False
     act: lrelu
     beta: 100
 train:
-  val: False
-  test: False
   pde: False
   device: cuda
-  batch_size: 1024
+  batch_size: 4
   continue_train: true
   optimizer: Adam
   optimizer_param: 0.00001 #1e-4  #1e-4 for lr and 0.9 for momentum
@@ -61,4 +63,5 @@ train:
   train_stage_2: 100000  #freeze weight prediction
   square: False
   abs: True
+
 
