@@ -18,9 +18,9 @@ def faiss_idx_np(amass_datas, root_dir):
     all_pose = []
     print(len(amass_datas))
     tmp = 0
-    for amass_data in amass_datas:
+    for amass_data in amass_datas[:2]:
         ds_dir = os.path.join(root_dir,amass_data)
-        seqs = sorted(os.listdir(ds_dir))
+        seqs = sorted(os.listdir(ds_dir))[:2]
         print(amass_data, len(seqs))
 
 
@@ -109,6 +109,8 @@ def main(args):
     k_dist = args.k_dist
     for query_batch in query_data_loader:
         quer_pose = query_batch.get('pose').to(device=device)[0]
+        org_pose = query_batch.get('org_pose').to(device=device)[0]
+        ipdb.set_trace()
         if args.data_type == 'np':
             inp_pose = quer_pose.reshape(len(quer_pose),84).detach().cpu().numpy()
         else:
@@ -203,3 +205,4 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(arguments.out_dir, arguments.seq_file)):
         main(arguments)
     print('done.....', arguments.seq_file)
+    main(arguments)

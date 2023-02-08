@@ -76,13 +76,13 @@ class PoseData(Dataset):
         for sigma in self.sigma:
             indices = np.random.randint(0, len(quat_pose), self.num_samples)
             sampled_pose = quat_pose[indices]
-            sampled_pose = sampled_pose +sigma*sampled_pose
+            sampled_pose = sampled_pose +sigma*np.random.rand(21,4)*sampled_pose
             sampled_pose = sampled_pose / np.linalg.norm(sampled_pose, axis=2, keepdims=True)
             samples_poses.extend(sampled_pose)
         sampled_poses = np.array(samples_poses)
-        sampled_poses = quat_doublecover(sampled_poses)
+        # sampled_poses = quat_doublecover(sampled_poses)
 
-        return {'pose': sampled_poses}
+        return {'pose': sampled_poses, 'org_pose': quat_pose[indices]}
 
     def get_loader(self, shuffle=False):
 

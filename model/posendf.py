@@ -12,6 +12,20 @@ from model.network.net_modules import  StructureEncoder, DFNet
 
 import time
 import pickle as pkl
+from torch.autograd import grad
+
+
+def gradient(inputs, outputs):
+    d_points = torch.ones_like(outputs, requires_grad=False, device=outputs.device)
+    points_grad = grad(
+        outputs=outputs,
+        inputs=inputs,
+        grad_outputs=d_points,
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True)[0]
+    return points_grad
+
 
 class PoseNDF(torch.nn.Module):
 
@@ -57,11 +71,15 @@ class PoseNDF(torch.nn.Module):
         pose = inputs['pose'].to(device=self.device).reshape(-1,21,4)
         dist_gt = inputs['dist'].to(device=self.device).reshape(-1)
         rand_pose_in = torch.nn.functional.normalize(pose.to(device=self.device),dim=1)
+        
+
         if self.enc:
             rand_pose_in = self.enc(rand_pose_in)
         dist_pred = self.dfnet(rand_pose_in)
         loss = self.loss_l1(dist_pred[:,0], dist_gt)
-        return loss, {'dist': loss }
-
+        # eikonal term loss
+        grad_val = gradient(rand_pose_in, dist_pred)
+        eikonal_loss =  ((grad_val.norm(2, dim=-1) - 1) ** 2).mean()
+        return loss, {'dist': loss , 'eikonal': eikonal_loss}
 
 

@@ -44,7 +44,7 @@ class PoseNDF_trainer(object):
         self.iter_nums = 0 
 
         #create exp name based on experiment params
-        self.loss_weight = {'man_loss': 0, 'dist': 1.0, 'eikonal': 0}
+        self.loss_weight = {'man_loss': 0, 'dist': 1.0, 'eikonal': 1.0}
        
         self.exp_name = opt['experiment']['exp_name']
         self.loss = opt['train']['loss_type']
@@ -107,6 +107,7 @@ class PoseNDF_trainer(object):
         for batch in val_data_loader:
             loss_dict, output= self.model(batch)
             sum_val_loss += loss_dict['data'].item()
+            print( loss_dict['data'].item())
         val_loss =  sum_val_loss /len(val_data_loader)
         self.writer.add_scalar("validation_test/epoch", val_loss, epoch)
 
@@ -154,10 +155,10 @@ class PoseNDF_trainer(object):
         # path = self.checkpoint_path + 'checkpoint_epoch_{}.tar'.format(checkpoints[-1])
         path = self.checkpoint_path + 'checkpoint_epoch_best.tar'
 
-        print('Loaded checkpoint from: {}'.format(path))
         checkpoint = torch.load(path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        print('Loaded checkpoint from: {}'.format(path))
 
         epoch = checkpoint['epoch']
         return epoch

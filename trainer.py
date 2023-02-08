@@ -6,16 +6,17 @@ from configs.config import load_config
 from model.train_posendf import PoseNDF_trainer
 import shutil
 from data.data_splits import amass_splits
+import ipdb
 
-def train(opt,config_file):
+def train(opt,config_file,test=False):
 
     trainer = PoseNDF_trainer(opt)
     # copy the config file
     copy_config = '{}/{}/{}'.format(opt['experiment']['root_dir'], trainer.exp_name, 'config.yaml')
     shutil.copyfile(config_file,copy_config )
     val = opt['experiment']['val']
-    test = opt['experiment']['test']
     if test:
+        ipdb.set_trace()
         trainer.inference(trainer.ep)
     for i in range(trainer.ep, opt['train']['max_epoch']):
         loss,epoch_loss = trainer.train_model(i)
@@ -34,4 +35,4 @@ if __name__ == '__main__':
     opt = load_config(args.config)
     #save the config file
 
-    train(opt, args.config)
+    train(opt, args.config, args.test)
