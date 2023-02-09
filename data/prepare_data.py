@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # Paths to output files
     parser.add_argument("-rd", "--raw_data", type=str, default="/BS/humanpose/static00/data/PoseNDF_raw/smpl_h",
                         help="Path to the sampled poses from AMASS")
-    parser.add_argument("-op", "--out_path", type=str, default="/BS/humanpose/static00/data/PoseNDF_train/smpl_h",
+    parser.add_argument("-op", "--out_path", type=str, default="/BS/humanpose/static00/data/PoseNDF_train/smpl_h_new",
                         help="Path to the resulting datafolder(storing dataset)")
     parser.add_argument("-bf", "--bash_file", type=str, default="./traindata.sh",
                         help="Path to the bash script file")

@@ -18,9 +18,9 @@ def faiss_idx_np(amass_datas, root_dir):
     all_pose = []
     print(len(amass_datas))
     tmp = 0
-    for amass_data in amass_datas[:2]:
+    for amass_data in amass_datas:
         ds_dir = os.path.join(root_dir,amass_data)
-        seqs = sorted(os.listdir(ds_dir))[:2]
+        seqs = sorted(os.listdir(ds_dir))
         print(amass_data, len(seqs))
 
 
@@ -110,7 +110,6 @@ def main(args):
     for query_batch in query_data_loader:
         quer_pose = query_batch.get('pose').to(device=device)[0]
         org_pose = query_batch.get('org_pose').to(device=device)[0]
-        ipdb.set_trace()
         if args.data_type == 'np':
             inp_pose = quer_pose.reshape(len(quer_pose),84).detach().cpu().numpy()
         else:
@@ -133,51 +132,14 @@ def main(args):
         # distances, neighbors = faiss_model.search(quer_pose.reshape(len(quer_pose), 84).cpu().detach().numpy(), 100)
         print('done for....{}, pose_shape...{}'.format(args.seq_file, dist.shape))
         np.savez(os.path.join(args.out_dir, args.seq_file), dist=dist.detach().cpu().numpy(),nn_pose =np.array(nn_pose), pose=quer_pose.detach().cpu().numpy())
-        # for amass_data in amass_datas:
-        #     ds_dir = os.path.join(args.raw_data,amass_data)
-        #     seqs = sorted(os.listdir(ds_dir))
-        #
-        #     for seq in seqs:
-        #         if not 'npz' in seq:
-        #
-        #             continue
-        #         ref_file = os.path.join(ds_dir, seq)
-        #         ref_data = PoseData(ref_file, mode='ref', batch_size=1, num_samples=args.num_samples)
-        #         ref_data_loader = ref_data.get_loader()
-        #
-        #         for ref_batch in ref_data_loader:
-        #             # print('running for....', ref_file)   #todo: why 2 times
-        #             ref_pose = ref_batch.get('pose').to(device=device)[0]
-        #             # print(ref_pose.shape)
-        #             if max < len(ref_pose):
-        #                 max = len(ref_pose)
-        #                 print(max)
-        #             # dist, nn_id = distance_calculator.dist_calc(quer_pose, ref_pose)
-        #             # all_id.append(nn_id.unsqueeze(2))
-        #             # all_dist.append(dist.unsqueeze(2))
-        #             # all_files.append(seq_file)
-    # print(max)
-    # ipdb.set_trace()
-    # # all_id = torch.cat(all_id)
-    # all_dist = torch.cat(all_dist,dim=2)
-    # all_dist = all_dist.reshape(len(all_dist),-1)
-    # try:
-    #
-    #     geo_val, geo_idx = tor ch.topk(all_dist, k=5, largest=False)
-    #     np.savez(os.path.join(args.out_dir, args.seq_file), dist=geo_val.detach().cpu().numpy(), idx=geo_idx.detach().cpu().numpy() )
-    # except:
-    #     np.savez(os.path.join(args.out_dir, args.seq_file.replace('.npz', '_tmp.npz')), dist=all_dist.detach().cpu().numpy(), idx=np.array(all_id) )
-    #
-    # #do index select
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preparing pose and distance paired data for training PoseNDF")
 
-    # Paths to output files
     parser.add_argument("-rd", "--raw_data", type=str, default="/BS/humanpose/static00/data/PoseNDF_raw/smpl_h",
                         help="Path to the resulting image")
     parser.add_argument("-od", "--out_dir", type=str,
-                        default="/BS/humanpose/static00/data/PoseNDF_train/smpl_h",
+                        default="/BS/humanpose/static00/data/PoseNDF_train/smpl_h_new",
                         help="Path to the resulting image")
     parser.add_argument("-m", "--metric", type=str,
                         default='euc',
@@ -188,8 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("-sf", "--seq_file", type=str,
                         default='BioMotionLab_NTroje/rub001.npz',
                         help="sequence file")
-    # Rendering parameters
-    parser.add_argument("-n", "--num_samples", default=10000, type=int,
+    parser.add_argument("-n", "--num_samples", default=5000, type=int,
                         help="Number of pose sampled from each sequence")
     parser.add_argument("-k", "--k_dist", default=5, type=int,
 
@@ -205,4 +166,3 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(arguments.out_dir, arguments.seq_file)):
         main(arguments)
     print('done.....', arguments.seq_file)
-    main(arguments)

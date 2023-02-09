@@ -26,8 +26,21 @@ class DFNet(nn.Module):
                 lin = nn.utils.weight_norm(lin)
 
             setattr(self, "lin" + str(l), lin)
-        self.actv = nn.ReLU()
-        self.out_actv = nn.ReLU()
+
+        if opt['act'] == 'lrelu':    
+            self.actv = nn.LeakyReLU()
+            self.out_actv = nn.LeakyReLU()
+        
+        if opt['act'] == 'relu':    
+            self.actv = nn.ReLU()
+            self.out_actv = nn.ReLU()
+        
+
+        if opt['act'] == 'softplus':    
+            self.actv = nn.Softplus(beta=opt['beta'])
+            self.out_actv = nn.Softplus(beta=opt['beta'])
+        
+
 
 
     def forward(self, p):
@@ -51,7 +64,7 @@ class DFNet(nn.Module):
 class BoneMLP(nn.Module):
     """from LEAP code(CVPR21, Marko et al)"""
 
-    def __init__(self, bone_dim, bone_feature_dim,parent=-1):
+    def __init__(self, bone_dim, bone_feature_dim,parent=-1, act='relu', beta=100.):
         super(BoneMLP, self).__init__()
         if parent ==-1:
             in_features = bone_dim
@@ -59,12 +72,28 @@ class BoneMLP(nn.Module):
             in_features = bone_dim + bone_feature_dim
         n_features = bone_dim + bone_feature_dim
 
-        self.net = nn.Sequential(
-            nn.Linear(in_features, n_features),
-            nn.ReLU(),
-            nn.Linear(n_features, bone_feature_dim),
-            nn.ReLU()
-        )
+        if act  =='relu':
+            self.net = nn.Sequential(
+                nn.Linear(in_features, n_features),
+                nn.ReLU(),
+                nn.Linear(n_features, bone_feature_dim),
+                nn.ReLU()
+            )
+
+        if act  =='lrelu':
+            self.net = nn.Sequential(
+                nn.Linear(in_features, n_features),
+                nn.LeakyReLU(),
+                nn.Linear(n_features, bone_feature_dim),
+                nn.LeakyReLU()
+            )
+        if act  =='softplus':
+            self.net = nn.Sequential(
+                nn.Linear(in_features, n_features),
+                nn.Softplus(beta=beta),
+                nn.Linear(n_features, bone_feature_dim),
+                nn.Softplus(beta=beta)
+            )
 
     def forward(self, bone_feat):
 
@@ -83,7 +112,9 @@ class StructureEncoder(nn.Module):
         self.num_joints = len(self.parent_mapping)
         self.out_dim = self.num_joints * local_feature_size
 
-        self.net = nn.ModuleList([ BoneMLP(self.input_dim, local_feature_size, self.parent_mapping[i]) for i in range(self.num_joints) ])
+
+
+        self.net = nn.ModuleList([ BoneMLP(self.input_dim, local_feature_size, self.parent_mapping[i], opt['act'], opt['beta']) for i in range(self.num_joints) ])
 
     def get_out_dim(self):
         return self.out_dim

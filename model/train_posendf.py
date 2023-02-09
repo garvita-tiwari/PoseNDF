@@ -36,6 +36,9 @@ class PoseNDF_trainer(object):
         if opt['train']['continue_train']:
             self.ep = self.load_checkpoint()
         
+        # if opt['train']['inference']:
+        #     self.ep = self.load_checkpoint()
+        
 
     
     def init_net(self, opt):
@@ -44,12 +47,12 @@ class PoseNDF_trainer(object):
         self.iter_nums = 0 
 
         #create exp name based on experiment params
-        self.loss_weight = {'man_loss': 0, 'dist': 1.0, 'eikonal': 1.0}
+        self.loss_weight = {'man_loss': 0, 'dist': opt['train']['dist'], 'eikonal': opt['train']['eikonal']}
        
         self.exp_name = opt['experiment']['exp_name']
         self.loss = opt['train']['loss_type']
 
-        self.exp_name = '{}_{}_{}_{}'.format(self.exp_name,  opt['model']['DFNet']['act'],self.loss,  opt['train']['optimizer_param'])
+        self.exp_name = '{}_{}_{}_{}_dist{}_eik{}'.format(self.exp_name,  opt['model']['DFNet']['act'],self.loss,  opt['train']['optimizer_param'], opt['train']['dist'], opt['train']['eikonal'])
         self.exp_path = '{}/{}/'.format( opt['experiment']['root_dir'],self.exp_name )
         self.checkpoint_path = self.exp_path + 'checkpoints/'
         if not os.path.exists(self.checkpoint_path):
@@ -82,7 +85,7 @@ class PoseNDF_trainer(object):
         
         for i, inputs in enumerate(self.train_dataset):
             self.optimizer.zero_grad()
-            _, loss_dict = self.model(inputs)
+            _, loss_dict = self.model(inputs['pose'], inputs['dist'])
             loss = 0.0
             for k in loss_dict.keys():
                 loss += self.loss_weight[k]*loss_dict[k]
@@ -94,6 +97,8 @@ class PoseNDF_trainer(object):
         for k in loss_dict.keys():
             self.writer.add_scalar("train/loss_{}".format(k), loss_dict[k].item(), self.iter_nums )
         self.writer.add_scalar("train/epoch", epoch_loss.avg, ep)
+        print( "train/epoch", epoch_loss.avg, ep)
+
         self.save_checkpoint(ep)
         return loss.item(),epoch_loss.avg
     

@@ -67,19 +67,24 @@ class PoseNDF(torch.nn.Module):
         dist_vals = torch.mean(torch.topk(dist,k=5,dim=1,largest=False)[0],dim=1)
         return dist_vals
 
-    def forward(self, inputs ):
-        pose = inputs['pose'].to(device=self.device).reshape(-1,21,4)
-        dist_gt = inputs['dist'].to(device=self.device).reshape(-1)
+    def forward(self, pose, dist_gt=None, train=True ):
+        pose = pose.to(device=self.device).reshape(-1,21,4)
+        if train:
+            dist_gt = dist_gt.to(device=self.device).reshape(-1)
         rand_pose_in = torch.nn.functional.normalize(pose.to(device=self.device),dim=1)
         
 
         if self.enc:
             rand_pose_in = self.enc(rand_pose_in)
         dist_pred = self.dfnet(rand_pose_in)
-        loss = self.loss_l1(dist_pred[:,0], dist_gt)
-        # eikonal term loss
-        grad_val = gradient(rand_pose_in, dist_pred)
-        eikonal_loss =  ((grad_val.norm(2, dim=-1) - 1) ** 2).mean()
-        return loss, {'dist': loss , 'eikonal': eikonal_loss}
+        if train:
+            loss = self.loss_l1(dist_pred[:,0], dist_gt)
+            # eikonal term loss
+            grad_val = gradient(rand_pose_in, dist_pred)
+            eikonal_loss =  ((grad_val.norm(2, dim=-1) - 1) ** 2).mean()
+            return loss, {'dist': loss , 'eikonal': eikonal_loss}
+        else:
+            return {'dist_pred': dist_pred }
+            
 
 

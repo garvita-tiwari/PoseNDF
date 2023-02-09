@@ -4,4 +4,7 @@ __pycache__/
 *.sh
 data/old_exp/*
 data/renderings.sh   #MPI cluster code
-configs/amass_mpi.yaml  
+configs/amass_mpi.yaml
+configs/amass_lrelu.yaml  
+configs/amass_softplus.yaml  
+configs/amass_softplus_loss.yaml  
