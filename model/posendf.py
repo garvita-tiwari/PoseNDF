@@ -59,16 +59,13 @@ class PoseNDF(torch.nn.Module):
         super().train(mode)
 
 
-    def compute_distance(self, rand_pose):
-        """online data generation, not used"""
-        rand_pose = rand_pose.unsqueeze(1).repeat(1, len(self.train_poses),1,1)
-        train_pose = self.train_poses.unsqueeze(0).repeat( len(rand_pose),1, 1,1)
-        dist = torch.sum(torch.arccos(torch.sum(rand_pose*train_pose,dim=3)),dim=2)/2.0  #ToDo: replace with weighted sum, why sqrt??, refer to eq2
-        dist_vals = torch.mean(torch.topk(dist,k=5,dim=1,largest=False)[0],dim=1)
-        return dist_vals
+    def forward(self, pose, dist_gt=None, man_poses=None, train=True,eikonal=0.0 ):
 
-    def forward(self, pose, dist_gt=None, train=True ):
         pose = pose.to(device=self.device).reshape(-1,21,4)
+        if train:
+            pose.requires_grad=True
+        # if  pose.isnan().any():
+        #     ipdb.set_trace()
         if train:
             dist_gt = dist_gt.to(device=self.device).reshape(-1)
         rand_pose_in = torch.nn.functional.normalize(pose.to(device=self.device),dim=1)
@@ -77,14 +74,31 @@ class PoseNDF(torch.nn.Module):
         if self.enc:
             rand_pose_in = self.enc(rand_pose_in)
         dist_pred = self.dfnet(rand_pose_in)
+
         if train:
+            #calculate distance for manifold poses
+            man_poses = man_poses.to(device=self.device).reshape(-1,21,4)
+            if self.enc:
+                man_pose_in = self.enc(man_poses)
+            dist_man = self.dfnet(man_pose_in)
+
             loss = self.loss_l1(dist_pred[:,0], dist_gt)
+            loss_man = (dist_man.abs()).mean()
+
             # eikonal term loss
-            grad_val = gradient(rand_pose_in, dist_pred)
-            eikonal_loss =  ((grad_val.norm(2, dim=-1) - 1) ** 2).mean()
-            return loss, {'dist': loss , 'eikonal': eikonal_loss}
+            grad_val = gradient(pose, dist_pred)
+
+            # if  grad_val.isnan().any():
+            #     ipdb.set_trace()
+            eikonal_loss = torch.zeros(1)
+            if eikonal > 0.0:
+                
+                eikonal_loss =  ((grad_val.norm(2, dim=-1) - 1) ** 2).mean()
+                return loss, {'dist': loss , 'man_loss': loss_man, 'eikonal': eikonal_loss}
+
+            return loss, {'dist': loss }
         else:
-            return {'dist_pred': dist_pred }
+            return {'dist_pred': dist_pred}
             
 
 

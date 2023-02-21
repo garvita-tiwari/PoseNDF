@@ -27,7 +27,7 @@ import torch.nn as nn
 from smplx.lbs import transform_mat
 
 
-def renderer(vertices, faces, out_path, device, init=False):
+def renderer(vertices, faces, out_path, device, prefix='out'):
     out_path = os.path.join(out_path, 'render')
     os.makedirs(out_path, exist_ok=True)
     R, T = look_at_view_transform(2.0, 0, 0) 
@@ -60,16 +60,9 @@ def renderer(vertices, faces, out_path, device, init=False):
 
     meshes = Meshes(vertices, faces.unsqueeze(0).repeat(len(vertices),1,1), textures=textures)
     images = renderer(meshes)
+    [cv2.imwrite(os.path.join(out_path, '{}_{:04}.jpg'.format(prefix, b_id)), cv2.cvtColor(images[b_id, ..., :3].detach().cpu().numpy()*255, cv2.COLOR_RGB2BGR)) for b_id in range(len(vertices))]
 
-    if init:
-        # [cv2.imwrite(os.path.join(out_path, 'init_{:04}.jpg'.format(b_id)), Image.fromarray(images[b_id, ..., :3].cpu().numpy()*255, "RGB")) for b_id in range(len(T))]
-        [cv2.imwrite(os.path.join(out_path, 'init_{:04}.jpg'.format(b_id)), cv2.cvtColor(images[b_id, ..., :3].detach().cpu().numpy()*255, cv2.COLOR_RGB2BGR)) for b_id in range(len(vertices))]
-        # [ Image.fromarray(images[b_id, ..., :3].detach().cpu().numpy()*255, "RGB").save(os.path.join(out_path, 'init_{:04}.jpg'.format(b_id))) for b_id in range(len(vertices))]
-    else:
-        # [ Image.fromarray(images[b_id, ..., :3].detach().cpu().numpy()*255, "RGB").save(os.path.join(out_path, 'results_{:04}.jpg'.format(b_id))) for b_id in range(len(vertices))]
-        [cv2.imwrite(os.path.join(out_path, 'results_{:04}.jpg'.format(b_id)), cv2.cvtColor(images[b_id, ..., :3].detach().cpu().numpy()*255, cv2.COLOR_RGB2BGR)) for b_id in range(len(vertices))]
-
-
+   
 """Perspective camers from SMPLify-X
 https://github.com/vchoutas/smplify-x/blob/master/smplifyx/camera.py"""
 class PerspectiveCamera(nn.Module):

@@ -11,6 +11,7 @@ import ipdb
 from model.load_data import PoseData
 from model.loss_utils import AverageMeter
 import shutil
+
 class PoseNDF_trainer(object):
 
     def __init__(self, opt):
@@ -19,14 +20,16 @@ class PoseNDF_trainer(object):
         self.enc_name = 'Raw'
         if opt['model']['StrEnc']['use']:
             self.enc_name = opt['model']['StrEnc']['name']
-        self.train_dataset = PoseData('train', data_path=opt['data']['data_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'])
-        self.val_dataset = PoseData('train', data_path=opt['data']['data_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'])
+        self.train_dataset = PoseData('train', data_path=opt['data']['data_dir'], amass_dir=opt['data']['amass_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'], flip=opt['data']['flip'])
+        # self.val_dataset = PoseData('train', data_path=opt['data']['data_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'],flip=opt['data']['flip'])
         self.train_dataset  = self.train_dataset.get_loader()
-        self.val_dataset  = self.val_dataset.get_loader()
+        # self.val_dataset  = self.val_dataset.get_loader()
         # create all the models and dataloader:
         self.learning_rate = opt['train']['optimizer_param']
         self.model = PoseNDF(opt).to(self.device)
-        self.optimizer = torch.optim.Adam( self.model.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.Adam( self.model.parameters(), lr=self.learning_rate, weight_decay=1e-4)
+        #self.optim_schedule = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=25000, gamma=0.1)
+
         self.batch_size= opt['train']['batch_size']
 
         ##initialise the network
@@ -47,12 +50,15 @@ class PoseNDF_trainer(object):
         self.iter_nums = 0 
 
         #create exp name based on experiment params
-        self.loss_weight = {'man_loss': 0, 'dist': opt['train']['dist'], 'eikonal': opt['train']['eikonal']}
+        self.loss_weight = {'man_loss':  opt['train']['man_loss'], 'dist': opt['train']['dist'], 'eikonal': opt['train']['eikonal']}
        
         self.exp_name = opt['experiment']['exp_name']
         self.loss = opt['train']['loss_type']
 
         self.exp_name = '{}_{}_{}_{}_dist{}_eik{}'.format(self.exp_name,  opt['model']['DFNet']['act'],self.loss,  opt['train']['optimizer_param'], opt['train']['dist'], opt['train']['eikonal'])
+        if opt['data']['flip']:
+            self.exp_name = 'flip_{}'.format(self.exp_name)
+
         self.exp_path = '{}/{}/'.format( opt['experiment']['root_dir'],self.exp_name )
         self.checkpoint_path = self.exp_path + 'checkpoints/'
         if not os.path.exists(self.checkpoint_path):
@@ -85,12 +91,13 @@ class PoseNDF_trainer(object):
         
         for i, inputs in enumerate(self.train_dataset):
             self.optimizer.zero_grad()
-            _, loss_dict = self.model(inputs['pose'], inputs['dist'])
+            _, loss_dict = self.model(inputs['pose'], inputs['dist'], inputs['man_poses'], eikonal=self.loss_weight['eikonal'] )
             loss = 0.0
             for k in loss_dict.keys():
                 loss += self.loss_weight[k]*loss_dict[k]
             loss.backward()
             self.optimizer.step()
+            #self.optim_schedule.step()
             epoch_loss.update(loss, self.batch_size)
             self.iter_nums +=1
             # logger and summary writer
@@ -102,38 +109,38 @@ class PoseNDF_trainer(object):
         self.save_checkpoint(ep)
         return loss.item(),epoch_loss.avg
     
-    def inference(self, epoch, eval=True):
-        self.model.eval()
-        sum_val_loss = 0
+    # def inference(self, epoch, eval=True):
+    #     self.model.eval()
+    #     sum_val_loss = 0
 
-        val_data_loader = self.val_dataset
-        out_path = os.path.join(self.exp_path, 'latest_{}'.format(epoch))
-        os.makedirs(out_path, exist_ok=True)
-        for batch in val_data_loader:
-            loss_dict, output= self.model(batch)
-            sum_val_loss += loss_dict['data'].item()
-            print( loss_dict['data'].item())
-        val_loss =  sum_val_loss /len(val_data_loader)
-        self.writer.add_scalar("validation_test/epoch", val_loss, epoch)
+    #     val_data_loader = self.val_dataset
+    #     out_path = os.path.join(self.exp_path, 'latest_{}'.format(epoch))
+    #     os.makedirs(out_path, exist_ok=True)
+    #     for batch in val_data_loader:
+    #         loss_dict, output= self.model(batch)
+    #         sum_val_loss += loss_dict['data'].item()
+    #         print( loss_dict['data'].item())
+    #     val_loss =  sum_val_loss /len(val_data_loader)
+    #     self.writer.add_scalar("validation_test/epoch", val_loss, epoch)
 
-        return val_loss
+    #     return val_loss
 
-    def validate(self, epoch, eval=True):
-        self.model.eval()
-        sum_val_loss = 0
+    # def validate(self, epoch, eval=True):
+    #     self.model.eval()
+    #     sum_val_loss = 0
 
-        val_data_loader = self.val_dataset
-        for batch in val_data_loader:
-            loss_dict, _ = self.model(batch)
-            sum_val_loss += loss_dict['data'].item()
-        val_loss =  sum_val_loss /len(val_data_loader)
-        self.writer.add_scalar("validation_vert/epoch", val_loss, epoch)
+    #     val_data_loader = self.val_dataset
+    #     for batch in val_data_loader:
+    #         loss_dict, _ = self.model(batch)
+    #         sum_val_loss += loss_dict['data'].item()
+    #     val_loss =  sum_val_loss /len(val_data_loader)
+    #     self.writer.add_scalar("validation_vert/epoch", val_loss, epoch)
 
-        if val_loss < self.val_min:
-            self.val_min = val_loss
-            self.save_checkpoint(epoch)
-        print('validation vertices loss at {}....{:08f}'.format(epoch,val_loss))
-        return val_loss
+    #     if val_loss < self.val_min:
+    #         self.val_min = val_loss
+    #         self.save_checkpoint(epoch)
+    #     print('validation vertices loss at {}....{:08f}'.format(epoch,val_loss))
+    #     return val_loss
 
 
 

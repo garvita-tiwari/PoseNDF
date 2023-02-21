@@ -16,6 +16,7 @@ from pytorch3d.transforms import axis_angle_to_quaternion, axis_angle_to_matrix,
 from tqdm import tqdm
 from pytorch3d.io import save_obj
 import os
+import cv2
 
 class ImageFit(object):
     def __init__(self, posendf,  body_model, out_path='./experiment_results/motion_denoise', debug=False, device='cuda:0', batch_size=1, gender='male', use_joints_conf=True):
@@ -29,6 +30,7 @@ class ImageFit(object):
         init_joints_idxs = [9, 12, 2, 5]
         self.init_joints_idxs = torch.tensor(init_joints_idxs, device=self.device)
         self.trans_estimation = 10.0
+        self.batch_size= batch_size
 
     
     def get_loss_weights(self):
@@ -96,8 +98,8 @@ class ImageFit(object):
         camera = camera.to(device=self.device)
 
         # create initial SMPL from mean pose and shape
-        betas = torch.zeros((batch_size,10)).to(device=self.device)
-        pose_body = torch.zeros((batch_size,69)).to(device=self.device)
+        betas = torch.zeros((self.batch_size,10)).to(device=self.device)
+        pose_body = torch.zeros((self.batch_size,69)).to(device=self.device)
         smpl_init = self.body_model(betas=betas, pose_body=pose_body) 
 
         keypoint_data = torch.tensor(keypoints, dtype=self.dtype)
@@ -170,7 +172,6 @@ class ImageFit(object):
         self.visualize(smpl_init.vertices, smpl_init.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True, init=True)
 
         init_joints = torch.from_numpy(smpl_init.Jtr.detach().cpu().numpy().astype(np.float32)).to(device=self.device)
-        init_pose = noisy_poses.detach().cpu().numpy()
         # Optimizer
         smpl_init.body_pose.requires_grad= True
         smpl_init.betas.requires_grad = True
@@ -234,12 +235,12 @@ def main(opt, ckpt, image_folder, out_path):
     body_model = BodyModel(bm_path=bm_dir_path, model_type='smpl', batch_size=batch_size,  num_betas=10).to(device=device)
 
     # load image and keypoints
-    motion_data = np.load(motion_file)['pose_body'][:batch_size]
-    noisy_poses = torch.from_numpy(motion_data.astype(np.float32)).to(device=device)
+    image = cv2.imread(os.path.join(image_folder, 'img.jpg'))
+    keypoints = torch.from_numpy(np.load(os.path.join(image_folder, 'kpts.npz'))['0'].astype(np.float32)).to(device=device)
 
     # create Motion denoiser layer
-    motion_denoiser = ImageFit(net, body_model=body_model, batch_size=1, out_path=out_path)
-    motion_denoiser.optimize(image, keypoints)
+    imagefit = ImageFit(net, body_model=body_model, batch_size=1, out_path=out_path)
+    imagefit.optimize(image, keypoints)
 
 
 
