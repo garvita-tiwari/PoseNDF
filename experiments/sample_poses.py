@@ -12,7 +12,7 @@ import ipdb
 import torch
 import numpy as np
 from body_model import BodyModel
-from exp_utils import renderer
+from exp_utils import renderer, quat_flip
 
 from pytorch3d.transforms import axis_angle_to_quaternion, axis_angle_to_matrix, matrix_to_quaternion, quaternion_to_axis_angle
 from tqdm import tqdm
@@ -22,10 +22,6 @@ import os
 from torch.autograd import grad
 
 
-def quat_flip(pose_in):
-    is_neg = pose_in[:,:,0] <0
-    pose_in[is_neg] = (-1)*pose_in[is_neg]
-    return pose_in, is_neg
 
 def gradient(inputs, outputs):
     d_points = torch.ones_like(outputs, requires_grad=False, device=outputs.device)
@@ -140,10 +136,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Interpolate using PoseNDF.'
     )
-    parser.add_argument('--config', '-c', default='configs/config_debug/new_files/configs/small_1e-05_10000_0.1_1_0.yaml', type=str, help='Path to config file.')
-    parser.add_argument('--ckpt_path', '-ckpt', default='/BS/humanpose/static00/pose_manifold/amass_single_old/flip_small_softplus_l1_1e-05__10000_dist1_eik0/checkpoints/checkpoint_epoch_best.tar', type=str, help='Path to pretrained model.')
+    parser.add_argument('--config', '-c', default='/BS/humanpose/static00/pose_manifold/amass_flip_test/flip_small_softplus_l1_1e-05__10000_dist0.5_eik0_man0.1/config.yaml', type=str, help='Path to config file.')
+    parser.add_argument('--ckpt_path', '-ckpt', default='/BS/humanpose/static00/pose_manifold/amass_flip_test/flip_small_softplus_l1_1e-05__10000_dist0.5_eik0_man0.1/checkpoints/checkpoint_epoch_best.tar', type=str, help='Path to pretrained model.')
     parser.add_argument('--noisy_pose', '-np', default='/BS/humanpose/static00/data/PoseNDF_train/smpl_h_flips/ACCAD/Female1General_c3d.npz', type=str, help='Path to noisy motion file')
-    parser.add_argument('--outpath_folder', '-out', default='/BS/humanpose/static00/data/PoseNDF_exp/sampled_poses', type=str, help='Path to output')
+    parser.add_argument('--outpath_folder', '-out', default='/BS/humanpose/static00/data/PoseNDF_exp/sampled_poses_bad', type=str, help='Path to output')
     args = parser.parse_args()
 
     opt = load_config(args.config)

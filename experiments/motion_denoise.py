@@ -10,7 +10,7 @@ import ipdb
 import torch
 import numpy as np
 from body_model import BodyModel
-from exp_utils import renderer
+from exp_utils import renderer, quat_flip
 
 from pytorch3d.transforms import axis_angle_to_quaternion, axis_angle_to_matrix, matrix_to_quaternion
 from tqdm import tqdm
@@ -29,7 +29,7 @@ class MotionDenoise(object):
     def get_loss_weights(self):
         """Set loss weights"""
         loss_weight = {'temp': lambda cst, it: 10. ** 1 * cst * (1 + it),
-                       'data': lambda cst, it: 10. ** 2 * cst / (1 + it),
+                       'data': lambda cst, it: 10. ** 1 * cst / (1 + it),
                        'pose_pr': lambda cst, it:  10. ** 7 * cst * cst / (1 + it)
                        }
         return loss_weight
@@ -59,15 +59,22 @@ class MotionDenoise(object):
         # create initial SMPL joints and vertices for visualition(to be used for data term)
         smpl_init = self.body_model(betas=self.betas, pose_body=noisy_poses.view(-1, 69)) 
         self.visualize(smpl_init.vertices, smpl_init.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True, prefix='init')
+        if gt_poses is not None:
+            smpl_gt = self.body_model(betas=self.betas, pose_body=gt_poses)
+            self.visualize(smpl_gt.vertices, smpl_gt.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True,prefix='gt')
 
         init_joints = torch.from_numpy(smpl_init.Jtr.detach().cpu().numpy().astype(np.float32)).to(device=self.device)
         init_verts = torch.from_numpy(smpl_init.vertices.detach().cpu().numpy().astype(np.float32)).to(device=self.device)
         init_pose = noisy_poses.detach().cpu().numpy()
+
+        v2v_error = smpl_init.vertices - smpl_gt.vertices
+        v2v_error = torch.mean(torch.sqrt(torch.sum(v2v_error*v2v_error, dim=2)))*100.
+        print('initial error...', v2v_error)
         # Optimizer
         smpl_init.body_pose.requires_grad= True
         self.betas.requires_grad = False
         
-        optimizer = torch.optim.Adam([smpl_init.body_pose], 0.02, betas=(0.9, 0.999))
+        optimizer = torch.optim.Adam([smpl_init.body_pose], 0.03, betas=(0.9, 0.999))
         # Get loss_weights
         weight_dict = self.get_loss_weights()
 
@@ -79,6 +86,9 @@ class MotionDenoise(object):
                 loss_dict = dict()
                 # convert pose to quaternion and  predict distance
                 pose_quat = axis_angle_to_quaternion(smpl_init.body_pose.view(-1, 23, 3)[:, :21])
+                pose_quat, _ = quat_flip(pose_quat)
+                pose_quat = torch.nn.functional.normalize(pose_quat,dim=-1)
+
                 dis_val = self.pose_prior(pose_quat, train=False)['dist_pred']
                 loss_dict['pose_pr']= torch.mean(dis_val)
 
@@ -89,7 +99,7 @@ class MotionDenoise(object):
                 loss_dict['temp'] = torch.mean(torch.sqrt(torch.sum(temp_term*temp_term, dim=2)))
 
                 # calculate data term from inital noisy pose
-                if it > 0: #for nans
+                if i > 0: #for nans
                     data_term = smpl_init.Jtr  - init_joints
                     loss_dict['data'] = torch.mean(torch.sqrt(torch.sum(data_term*data_term, dim=2)))   
 
@@ -98,25 +108,27 @@ class MotionDenoise(object):
                 tot_loss.backward()
                 optimizer.step()
 
+                v2v_error = smpl_init.vertices - smpl_gt.vertices
+                v2v_error = torch.mean(torch.sqrt(torch.sum(v2v_error*v2v_error, dim=2)))*100.
 
-                l_str = 'Iter: {}'.format(i)
+                l_str = 'Step: {} Iter: {}'.format(it, i)
+                l_str += 'v2v : {:0.8f}'.format(v2v_error)
                 for k in loss_dict:
                     l_str += ', {}: {:0.8f}'.format(k, weight_dict[k](loss_dict[k], it).mean().item())
                     loop.set_description(l_str)
 
 
-        # ipdb.set_trace()
         # create final results
         smpl_init = self.body_model(betas=self.betas, pose_body=smpl_init.body_pose)
-        v2v_error = smpl_init.vertices - init_verts
         self.visualize(smpl_init.vertices, smpl_init.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True,prefix='out')
 
         if gt_poses is not None:
-            smpl_gt = self.body_model(betas=self.betas, pose_body=gt_poses)
-            self.visualize(smpl_gt.vertices, smpl_gt.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True,prefix='gt')
-
             v2v_error = smpl_init.vertices - smpl_gt.vertices
+        else:        
+            v2v_error = smpl_init.vertices - init_verts
+
         v2v_error = torch.mean(torch.sqrt(torch.sum(v2v_error*v2v_error, dim=2)))*100.
+
         print('V2V from noisy input:{:0.8f} cm'.format(v2v_error))
         return v2v_error.detach().cpu().numpy()
 
@@ -142,7 +154,7 @@ def main(opt, ckpt, motion_file,gt_data=None, out_path=None):
 
     if gt_data is not None:
 
-        motion_data_gt = np.load(motion_file)['pose_body']
+        motion_data_gt = np.load(gt_data)['pose_body']
         batch_size = len(motion_data_gt)
         pose_body = torch.from_numpy(motion_data_gt.astype(np.float32)).to(device=device)
         gt_poses = torch.zeros((batch_size, 69)).to(device=device)
@@ -159,8 +171,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Interpolate using PoseNDF.'
     )
-    parser.add_argument('--config', '-c', default='configs/amass_softplus.yaml', type=str, help='Path to config file.')
-    parser.add_argument('--ckpt_path', '-ckpt', default='/BS/humanpose/static00/pose_manifold/amass/latest_softplus_l1_1e-05_dist10.0_eik1.0/checkpoints/checkpoint_epoch_best.tar', type=str, help='Path to pretrained model.')
+    parser.add_argument('--config', '-c', default='/BS/humanpose/static00/pose_manifold/amass_flip_test/flip_small_softplus_l1_1e-05__10000_dist0.5_eik0_man0.1/config.yaml', type=str, help='Path to config file.')
+    parser.add_argument('--ckpt_path', '-ckpt', default='/BS/humanpose/static00/pose_manifold/amass_flip_test/flip_small_softplus_l1_1e-05__10000_dist0.5_eik0_man0.1/checkpoints/checkpoint_epoch_best.tar', type=str, help='Path to pretrained model.')
     parser.add_argument('--motion_data', '-mf', default='/BS/humanpose/static00/data/PoseNDF_exp/motion_denoise_data/SSM_synced/20161014_50033/punch_kick_sync_poses.npz', type=str, help='Path to noisy motion file')
     parser.add_argument('--outpath_folder', '-out', default='/BS/humanpose/static00/data/PoseNDF_exp/motion_denoise_results/', type=str, help='Path to output')
     args = parser.parse_args()
@@ -172,8 +184,8 @@ if __name__ == '__main__':
     datas = ['amass_noise_0.5_60', 'amass_noise_0.01_60', 'amass_noise_0.05_60', 'amass_noise_0.1_60']
     all_results = {}
     for data in datas:
-        data_dir = '/BS/humanpose/static00/experiments/humor/results/out/{}/results_out'.format(data)
-        args.outpath_folder = '/BS/humanpose/static00/experiments/humor/results/posendf/{}'.format(data)
+        data_dir = '/BS/humanpose/static00/experiments/humor_old/results/out/{}/results_out'.format(data)
+        args.outpath_folder = '/BS/humanpose/static00/experiments/humor_old/results/posendf/{}'.format(data)
         os.makedirs(args.outpath_folder ,exist_ok=True)
         seqs = sorted(os.listdir(data_dir))
         all_error = []

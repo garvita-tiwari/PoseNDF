@@ -26,6 +26,10 @@ import torch.nn as nn
 
 from smplx.lbs import transform_mat
 
+def quat_flip(pose_in):
+    is_neg = pose_in[:,:,0] <0
+    pose_in[is_neg] = (-1)*pose_in[is_neg]
+    return pose_in, is_neg
 
 def renderer(vertices, faces, out_path, device, prefix='out'):
     out_path = os.path.join(out_path, 'render')
