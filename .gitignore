@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 *.sh
+*.out
 data/old_exp/*
 data/renderings.sh   #MPI cluster code
 configs/config_debug
@@ -9,3 +10,4 @@ data/prepare_traindata2.py
 data/noisy_samples.py
 data/clean_samples.py
 data/data_verification
+experiments/scripts/*

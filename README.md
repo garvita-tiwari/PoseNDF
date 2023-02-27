@@ -57,7 +57,10 @@ Root directory will contain dataset, trained models and results.
 
 amass.yaml contains the configs used for the pretrained model. 
 
-#### 4. Download pre-trained model :  [Pretrained model](https://nextcloud.mpi-klsb.mpg.de/index.php/s/4zxN93WL769pSAK)
+#### 4. Download pre-trained model :  [Pretrained model](https://nextcloud.mpi-klsb.mpg.de/index.php/s/4zxN93WL769pSAK) 
+
+Latest model: version2/
+You can also find the corresponding config file in the same folder
 
 
 ## Inference 
