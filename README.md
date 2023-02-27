@@ -10,7 +10,8 @@ This repository contains official implementation of ECCV-2022 paper: Pose-NDF: M
   <img alt="org_scan" src="images/teaser.png" width="80%">
 </p>
 
-
+## UPDATE:
+Please use branch [version2](https://github.com/garvita-tiwari/PoseNDF/tree/version2) 
 
 ## Installation: 
 Please follow [INSTALL.md](INSTALL.md)
