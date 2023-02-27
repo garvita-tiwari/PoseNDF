@@ -62,41 +62,31 @@ class PoseNDF(torch.nn.Module):
     def forward(self, pose, dist_gt=None, man_poses=None, train=True,eikonal=0.0 ):
 
         pose = pose.to(device=self.device).reshape(-1,21,4)
-        if train:
+        if train and eikonal > 0.0:
             pose.requires_grad=True
-        # if  pose.isnan().any():
-        #     ipdb.set_trace()
+        #pose = torch.nn.functional.normalize(pose.to(device=self.device),dim=-1)
+
         if train:
             dist_gt = dist_gt.to(device=self.device).reshape(-1)
-        rand_pose_in = torch.nn.functional.normalize(pose.to(device=self.device),dim=1)
-        
-
         if self.enc:
-            rand_pose_in = self.enc(rand_pose_in)
+            rand_pose_in = self.enc(pose)
         dist_pred = self.dfnet(rand_pose_in)
-
         if train:
             #calculate distance for manifold poses
             man_poses = man_poses.to(device=self.device).reshape(-1,21,4)
+            #man_poses = torch.nn.functional.normalize(man_poses.to(device=self.device),dim=-1)
             if self.enc:
                 man_pose_in = self.enc(man_poses)
             dist_man = self.dfnet(man_pose_in)
-
             loss = self.loss_l1(dist_pred[:,0], dist_gt)
             loss_man = (dist_man.abs()).mean()
-
-            # eikonal term loss
-            grad_val = gradient(pose, dist_pred)
-
-            # if  grad_val.isnan().any():
-            #     ipdb.set_trace()
-            eikonal_loss = torch.zeros(1)
             if eikonal > 0.0:
-                
+                # eikonal term loss
+                grad_val = gradient(pose, dist_pred)
                 eikonal_loss =  ((grad_val.norm(2, dim=-1) - 1) ** 2).mean()
                 return loss, {'dist': loss , 'man_loss': loss_man, 'eikonal': eikonal_loss}
 
-            return loss, {'dist': loss }
+            return loss, {'dist': loss,  'man_loss': loss_man }
         else:
             return {'dist_pred': dist_pred}
             

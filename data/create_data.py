@@ -60,10 +60,7 @@ class PoseData(Dataset):
 
     def __len__(self):
         return self.runs
-        # if self.mode == 'ref':
-        #     return 1
-        # else:
-        #     return len(self.sigma)
+
 
     def __getitem__(self, idx):
 
@@ -71,23 +68,24 @@ class PoseData(Dataset):
         seq_pose = np.load(self.path)['pose_body'].astype(np.float32)[:, :63]
         seq_pose = seq_pose.reshape(len(seq_pose), 21, 3)
         # change axis angle to quaternion
-        # return {'pose': seq_pose, 'sigma_val':self.sigma[idx] }
-
         quat_pose = axis_angle_to_quaternion_np(seq_pose)
-        # quat_pose = quat_doublecover(quat_pose)   #Todo: do we need this here
 
         if self.mode == 'ref':
             return {'pose': quat_pose}
-
 
         # sample N poses from quat_pose, add noise and normalize
         samples_poses = []
         for i, num in enumerate(self.num_samples):
             indices = np.random.randint(0, len(quat_pose), num)
             sampled_pose = quat_pose[indices]
+
+            #both methods are fine
             # sampled_pose = sampled_pose + self.sigma[i]*np.random.rand(21,4)*sampled_pose
             sampled_pose = sampled_pose + self.sigma[i]*np.random.rand(21,4)
             sampled_pose = sampled_pose / np.linalg.norm(sampled_pose, axis=2, keepdims=True)
+
+            #move all points to single hemisphere
+            sampled_pose, _ = quat_flip(sampled_pose)  
             samples_poses.extend(sampled_pose)
         sampled_poses = np.array(samples_poses)
         # sampled_poses = quat_doublecover(sampled_poses)

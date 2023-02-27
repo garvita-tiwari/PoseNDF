@@ -37,7 +37,7 @@ def main(args):
             fp.write("cd /BS/garvita/work/code/PoseNDF "+ "\n")
             fp.write("case $SLURM_ARRAY_TASK_ID in" + "\n")
         count = 1
-        out_dir = '/BS/humanpose/static00/data/PoseNDF_train/smpl_h_final'
+        out_dir = args.out_path
         for amass_data in amass_datas:
             ds_dir = os.path.join(args.raw_data,amass_data)
             seqs = sorted(os.listdir(ds_dir))
@@ -52,7 +52,7 @@ def main(args):
                     fp.write("\t {})".format(count) + "\n")
                     fp.write("\t\t\t")
                 fp.write(
-                    "python data/prepare_traindata2.py --seq_file {}/{} ".format(amass_data, seq))
+                    "python data/prepare_traindata.py --seq_file {}/{} --runs {} --out_dir {}".format(amass_data, seq, 1, out_dir))
               
                 count += 1
                 if args.use_slurm:
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # Paths to output files
     parser.add_argument("-rd", "--raw_data", type=str, default="/BS/humanpose/static00/data/PoseNDF_raw/smpl_h2",
                         help="Path to the sampled poses from AMASS")
-    parser.add_argument("-op", "--out_path", type=str, default="/BS/humanpose/static00/data/PoseNDF_train/smpl_h_final",
+    parser.add_argument("-op", "--out_path", type=str, default="/BS/humanpose/static00/data/PoseNDF_train/smpl_h_small",
                         help="Path to the resulting datafolder(storing dataset)")
     parser.add_argument("-bf", "--bash_file", type=str, default="./tmp.sh",
                         help="Path to the bash script file")

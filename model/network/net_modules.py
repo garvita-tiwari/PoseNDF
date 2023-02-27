@@ -12,7 +12,8 @@ class DFNet(nn.Module):
                 dropout=0.3, output_layer=None):
         super().__init__()
         input_size = opt['in_dim']
-        hid_layer = opt['dims']
+        hid_layer = opt['dims'].split(',')
+        hid_layer = [int(val) for val in hid_layer]
         output_size = 1
         dims = [input_size] + [d_hidden for d_hidden in hid_layer] + [output_size]
 
@@ -21,12 +22,10 @@ class DFNet(nn.Module):
         for l in range(0, self.num_layers - 1):
             out_dim = dims[l + 1]
             lin = nn.Linear(dims[l], out_dim)
-
             # if weight_norm:
             #     lin = nn.utils.weight_norm(lin)
 
             setattr(self, "lin" + str(l), lin)
-
         if opt['act'] == 'lrelu':    
             self.actv = nn.LeakyReLU()
             self.out_actv = nn.ReLU()
@@ -50,25 +49,13 @@ class DFNet(nn.Module):
 
         for l in range(0, self.num_layers - 1):
             lin = getattr(self, "lin" + str(l))
-            # if  lin.weight.isnan().any():
-            #     ipdb.set_trace()
-            # if  lin.bias.isnan().any():
-            #     ipdb.set_trace()
-            # if  x.isnan().any():
-            #     ipdb.set_trace()
-            
             x = lin(x)
-            # if  tmp.isnan().any():
-            #     ipdb.set_trace()
-            # x = tmp
+  
             if l < self.num_layers - 2:
                 x =  self.actv(x)
 
-        # if self.squeeze_out:
-        #     x = torch.sigmoid(x)
         x =  self.out_actv(x)
-        # if not torch.all(x>0):
-        #     ipdb.set_trace()
+
         return x
 
 
@@ -158,7 +145,6 @@ class StructureEncoder(nn.Module):
         # fwd pass through the bone encoder
         features = [None] * self.num_joints
         # bone_transforms = torch.cat((bone_features, bone_lengths), dim=-1)
-
         for i, mlp in enumerate(self.net):
             parent = self.parent_mapping[i]
             if parent == -1:

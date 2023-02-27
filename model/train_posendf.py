@@ -20,7 +20,7 @@ class PoseNDF_trainer(object):
         self.enc_name = 'Raw'
         if opt['model']['StrEnc']['use']:
             self.enc_name = opt['model']['StrEnc']['name']
-        self.train_dataset = PoseData('train', data_path=opt['data']['data_dir'], amass_dir=opt['data']['amass_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'], flip=opt['data']['flip'])
+        self.train_dataset = PoseData('train', data_path=opt['data']['data_dir'], amass_dir=opt['data']['amass_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'], num_pts=opt['data']['num_pts'], single= opt['data']['single'], flip=opt['data']['flip'])
         # self.val_dataset = PoseData('train', data_path=opt['data']['data_dir'],  batch_size=opt['train']['batch_size'], num_workers=opt['train']['num_worker'],flip=opt['data']['flip'])
         self.train_dataset  = self.train_dataset.get_loader()
         # self.val_dataset  = self.val_dataset.get_loader()
@@ -28,14 +28,13 @@ class PoseNDF_trainer(object):
         self.learning_rate = opt['train']['optimizer_param']
         self.model = PoseNDF(opt).to(self.device)
         self.optimizer = torch.optim.Adam( self.model.parameters(), lr=self.learning_rate, weight_decay=1e-4)
-        #self.optim_schedule = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=25000, gamma=0.1)
 
         self.batch_size= opt['train']['batch_size']
-
-        ##initialise the network
-        self.init_net(opt)
         self.ep = 0
         self.val_min = 10000.
+        ##initialise the network
+        self.init_net(opt)
+
         if opt['train']['continue_train']:
             self.ep = self.load_checkpoint()
         
@@ -55,7 +54,7 @@ class PoseNDF_trainer(object):
         self.exp_name = opt['experiment']['exp_name']
         self.loss = opt['train']['loss_type']
 
-        self.exp_name = '{}_{}_{}_{}_dist{}_eik{}'.format(self.exp_name,  opt['model']['DFNet']['act'],self.loss,  opt['train']['optimizer_param'], opt['train']['dist'], opt['train']['eikonal'])
+        self.exp_name = '{}_{}_{}_{}__{}_dist{}_eik{}_man{}'.format(self.exp_name,  opt['model']['DFNet']['act'],self.loss,  opt['train']['optimizer_param'], opt['data']['num_pts'],  opt['train']['dist'], opt['train']['eikonal'], opt['train']['man_loss'])
         if opt['data']['flip']:
             self.exp_name = 'flip_{}'.format(self.exp_name)
 
@@ -65,17 +64,12 @@ class PoseNDF_trainer(object):
             print(self.checkpoint_path)
             os.makedirs(self.checkpoint_path)
         self.writer = SummaryWriter(self.exp_path + 'summary')
-        self.val_min = None
-        self.train_min = None
         self.loss = opt['train']['loss_type']
         self.n_part = opt['experiment']['num_part']
         self.loss_mse = torch.nn.MSELoss()
 
         self.batch_size = opt['train']['batch_size']
-        
-        self.relu = nn.ReLU()
-       
-        self.out_act = None
+               
 
         if self.loss == 'l1':
             self.loss_l1 = torch.nn.L1Loss()
@@ -88,7 +82,11 @@ class PoseNDF_trainer(object):
 
         self.model.train()
         epoch_loss = AverageMeter()
-        
+        individual_loss_epoch = {}
+        for loss_term in self.loss_weight.keys():
+            if self.loss_weight[loss_term]:
+                individual_loss_epoch[loss_term] = AverageMeter()
+
         for i, inputs in enumerate(self.train_dataset):
             self.optimizer.zero_grad()
             _, loss_dict = self.model(inputs['pose'], inputs['dist'], inputs['man_poses'], eikonal=self.loss_weight['eikonal'] )
@@ -97,13 +95,19 @@ class PoseNDF_trainer(object):
                 loss += self.loss_weight[k]*loss_dict[k]
             loss.backward()
             self.optimizer.step()
-            #self.optim_schedule.step()
+
             epoch_loss.update(loss, self.batch_size)
+            for loss_term in self.loss_weight.keys():
+                if self.loss_weight[loss_term]:
+                    individual_loss_epoch[loss_term].update(loss_dict[loss_term], self.batch_size)
+
             self.iter_nums +=1
             # logger and summary writer
-        for k in loss_dict.keys():
-            self.writer.add_scalar("train/loss_{}".format(k), loss_dict[k].item(), self.iter_nums )
+            for k in loss_dict.keys():
+                self.writer.add_scalar("train/Iter_{}".format(k), loss_dict[k].item(), self.iter_nums )
         self.writer.add_scalar("train/epoch", epoch_loss.avg, ep)
+        for k in loss_dict.keys():
+            self.writer.add_scalar("train/epoch_{}".format(k), individual_loss_epoch[k].avg, ep )
         print( "train/epoch", epoch_loss.avg, ep)
 
         self.save_checkpoint(ep)

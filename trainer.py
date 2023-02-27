@@ -16,7 +16,6 @@ def train(opt,config_file,test=False):
     shutil.copyfile(config_file,copy_config )
     val = opt['experiment']['val']
     if test:
-        ipdb.set_trace()
         trainer.inference(trainer.ep)
     for i in range(trainer.ep, opt['train']['max_epoch']):
         loss,epoch_loss = trainer.train_model(i)
