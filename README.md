@@ -69,22 +69,26 @@ Pose-NDF is a continuous model for plausible human poses based on neural distanc
 
 
 ### Pose generation
-    python trainer.py --config=configs/amass.yaml --test 
+    python experiments/sample_poses.py --config={} --ckpt_path={} --noisy_pose={} --outpath_folder={}
 
-This code randomly samples points in input pose space and project them on the learned manifold to generate realsitic poses. 
+noisy_pose: <filename>.npz['body_pose'] file containing random poses in quaternions. 
+
+outpath_folder: save rendered initial and projected pose.
+        
 
 ### Pose interpolation
-     python experiment/interp.py --config=configs/amass.yaml 
+     python experiment/interpolation.py --config=configs/amass.yaml 
 
 
 ### Motion denoising
-     python experiment/motion_denoise.py --config=configs/amass.yaml  --motion_data=<motion data file>
+     python experiment/motion_denoise.py --config=configs/amass.yaml  --motion_data=<motion data folder> --ckpt_path={}  --outpath_folder={}
 
-Motion data file is .npz file which contains "body_pose", "betas", "root_orient"
+  
+Motion data file is .npz file which contains "body_pose", "betas", "root_orient". This is generated using: https://github.com/davrempe/humor/tree/main/humor/datasets
 
 ### Image based 3d pose estimation
      1. Run openpose to generate 2d keypoints for given image(https://github.com/CMU-Perceptual-Computing-Lab/openpose).
-     2. python experiment/image_pose.py --config=configs/amass.yaml  --image_dir=<image data dir>
+     2. python experiment/image_fitting.py --config=configs/amass.yaml  --image_dir=<image data dir>
 
 
 Both image and corresponding keypoint should be in same directory with <image_name>.jpg and <image_name>.json being the image and 2d keypoints file respectively.
