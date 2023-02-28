@@ -18,12 +18,13 @@ from pytorch3d.io import save_obj
 import os
 
 class MotionDenoise(object):
-    def __init__(self, posendf,  body_model, out_path='./experiment_results/motion_denoise', debug=False, device='cuda:0', batch_size=1, gender='male'):
+    def __init__(self, posendf,  body_model, out_path='./experiment_results/motion_denoise', debug=False, device='cuda:0', batch_size=1, gender='male',render=False):
         self.debug = debug
         self.device = device
         self.pose_prior = posendf
         self.body_model = body_model
         self.out_path = out_path
+        self.render=render
         self.betas = torch.zeros((batch_size,10)).to(device=self.device)
     
     def get_loss_weights(self):
@@ -48,21 +49,22 @@ class MotionDenoise(object):
     @staticmethod
     def visualize(vertices, faces, out_path, device, joints=None, render=False, prefix='out', save_mesh=False):
         # save meshes and rendered results if needed
-        os.makedirs(out_path,exist_ok=True)
         if save_mesh:
+            os.makedirs(out_path,exist_ok=True)
             os.makedirs( os.path.join(out_path, 'meshes'), exist_ok=True)
             [save_obj(os.path.join(out_path, 'meshes', '{}_{:04}.obj'.format(prefix,i) ), vertices[i], faces) for i in range(len(vertices))]
 
         if render:
+            os.makedirs(out_path,exist_ok=True)
             renderer(vertices, faces, out_path, device=device,  prefix=prefix)
         
     def optimize(self, noisy_poses, gt_poses=None,  iterations=5, steps_per_iter=50):
         # create initial SMPL joints and vertices for visualition(to be used for data term)
         smpl_init = self.body_model(betas=self.betas, pose_body=noisy_poses.view(-1, 69)) 
-        #self.visualize(smpl_init.vertices, smpl_init.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True, prefix='init')
+        self.visualize(smpl_init.vertices, smpl_init.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=self.render, prefix='init')
         if gt_poses is not None:
             smpl_gt = self.body_model(betas=self.betas, pose_body=gt_poses)
-            #self.visualize(smpl_gt.vertices, smpl_gt.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True,prefix='gt')
+            self.visualize(smpl_gt.vertices, smpl_gt.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=self.render,prefix='gt')
 
         init_joints = torch.from_numpy(smpl_init.Jtr.detach().cpu().numpy().astype(np.float32)).to(device=self.device)
         init_verts = torch.from_numpy(smpl_init.vertices.detach().cpu().numpy().astype(np.float32)).to(device=self.device)
@@ -122,7 +124,7 @@ class MotionDenoise(object):
 
         # create final results
         smpl_init = self.body_model(betas=smpl_init.betas, pose_body=smpl_init.body_pose)
-        #self.visualize(smpl_init.vertices, smpl_init.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=True,prefix='out')
+        self.visualize(smpl_init.vertices, smpl_init.faces, self.out_path, device=self.device, joints=smpl_init.Jtr, render=self.render,prefix='out')
 
         if gt_poses is not None:
             v2v_error = smpl_init.vertices - smpl_gt.vertices
@@ -134,7 +136,7 @@ class MotionDenoise(object):
         print('V2V from noisy input:{:0.8f} cm'.format(v2v_error))
         return v2v_error.detach().cpu().numpy(), smpl_init.body_pose.detach().cpu().numpy(),  smpl_init.betas.detach().cpu().numpy()
 
-def main(opt, ckpt, motion_file,gt_data=None, out_path=None, seq=None):
+def main(opt, ckpt, motion_file,gt_data=None, out_path=None, seq=None, bm_dir_path = '/BS/garvita/work/SMPL_data/models/smpl',render=False):
 
     ### load the model
     net = PoseNDF(opt)
@@ -152,7 +154,7 @@ def main(opt, ckpt, motion_file,gt_data=None, out_path=None, seq=None):
     noisy_poses[:, :63] = pose_body
 
     #  load body model
-    bm_dir_path = '/BS/garvita/work/SMPL_data/models/smpl'
+    
     body_model = BodyModel(bm_path=bm_dir_path, model_type='smpl', batch_size=batch_size,  num_betas=10).to(device=device)
 
     if gt_data is not None:
@@ -163,7 +165,7 @@ def main(opt, ckpt, motion_file,gt_data=None, out_path=None, seq=None):
         gt_poses[:, :63] = pose_body
 
     # create Motion denoiser layer
-    motion_denoiser = MotionDenoise(net, body_model=body_model, batch_size=len(noisy_poses), out_path=out_path)
+    motion_denoiser = MotionDenoise(net, body_model=body_model, batch_size=len(noisy_poses), out_path=out_path,render=render)
     v2v_err, pose, betas = motion_denoiser.optimize(noisy_poses, gt_poses)
 
     np.savez(os.path.join(out_path, seq + '.npz'), v2v_error=v2v_err, pose_body=pose, betas=betas)
@@ -178,48 +180,35 @@ if __name__ == '__main__':
     )
     parser.add_argument('--config', '-c', default='/BS/humanpose/static00/pose_manifold/amass_flip_test/flip_small_softplus_l1_1e-05__10000_dist0.5_eik0_man0.1/config.yaml', type=str, help='Path to config file.')
     parser.add_argument('--ckpt_path', '-ckpt', default='/BS/humanpose/static00/pose_manifold/amass_flip_test/flip_small_softplus_l1_1e-05__10000_dist0.5_eik0_man0.1/checkpoints/checkpoint_epoch_best.tar', type=str, help='Path to pretrained model.')
-    parser.add_argument('--motion_data', '-mf', default='/BS/humanpose/static00/experiments/motion_experiment', type=str, help='Path to noisy motion file')
-    parser.add_argument('--outpath_folder', '-out', default='/BS/humanpose/static00/experiments/humor_old/results/posendf_first', type=str, help='Path to output')
+    parser.add_argument('--motion_data', '-mf', default='/BS/humanpose/static00/experiments/motion_experiment/amass_noise_0.1_60', type=str, help='Path to noisy motion file')
+    parser.add_argument('--outpath_folder', '-out', default='/BS/humanpose/static00/experiments/humor_old/results/posendf_first/amass_noise_0.1_60', type=str, help='Path to output')
+    parser.add_argument('--bm_dir_path', '-bm', default='/BS/garvita/work/SMPL_data/models/smpl', type=str, help='Path to output')
+    parser.add_argument('-rd', '--render',  action="store_true", help="render results")
+
     args = parser.parse_args()
 
     opt = load_config(args.config)
     motion_data = args.motion_data
     outpath_folder = args.outpath_folder
-    #running for tables:
-    datas = ['amass_noise_0.01_60', 'amass_noise_0.05_60', 'amass_noise_0.1_60', 'amass_noise_0.1_120', 'amass_noise_0.1_240']
-    #datas = ['amass_noise_0.1_60', 'amass_noise_0.05_60', 'amass_noise_0.01_60', 'amass_noise_0.5_60', ]
+
     all_results = {}
-    for data in datas:
-        data_dir =  os.path.join(motion_data, data, 'results_out')
-        outdir =  os.path.join(args.outpath_folder , data)
-        os.makedirs(outdir ,exist_ok=True)
-        seqs = sorted(os.listdir(data_dir))
-        all_error = []
-        print(len(seqs))
-        for seq in seqs:
-            out_path = os.path.join(outdir, seq)
-            os.makedirs(out_path,exist_ok=True)
-            if os.path.exists(os.path.join(out_path, seq + '.npz')):
-                print('already done...', data, seq)
-                v2v_err = np.load(os.path.join(out_path, seq + '.npz'))['v2v_error']
-                all_error.append(v2v_err)
-                continue
-            obs_path =  os.path.join(data_dir, seq, 'observations.npz')
-            if os.path.exists(obs_path):
-                v2v_err = main(opt, args.ckpt_path,obs_path, gt_data= os.path.join(data_dir, seq, 'gt_results.npz'),out_path=out_path, seq=seq)
-                all_error.append(v2v_err)
-        print(data, len(seqs), np.mean(np.array(all_error)))
-        all_results[data] =  np.array(all_error)
-    # print(all_results)
-    # all_err = [np.sum(np.array(all_results[data])) for data in datas[:4]]
-    # all_len = [len(all_results[data]) for data in datas[:4]]
-    # print(np.sum(all_err)/np.sum(all_len))
-
-    # all_err = [np.sum(np.array(all_results[data])) for data in datas[3:4]]
-    # all_len = [len(all_results[data]) for data in datas[3:4]]
-    # print(np.sum(all_err)/np.sum(all_len))
-
-    # all_err = [np.sum(np.array(all_results[data])) for data in [datas[4]]]
-    # all_len = [len(all_results[data]) for data in [datas[4]]]
-    # print(np.sum(all_err)/np.sum(all_len))
-    #np.savez('/BS/humanpose/static00/experiments/humor_old/results/posendf_table_first_order.npz', **all_results)
+    data_dir =  os.path.join(motion_data, 'results_out')
+    outdir =  args.outpath_folder 
+    os.makedirs(outdir ,exist_ok=True)
+    seqs = sorted(os.listdir(data_dir))
+    all_error = []
+    print(len(seqs))
+    for seq in seqs:
+        out_path = os.path.join(outdir, seq)
+        os.makedirs(out_path,exist_ok=True)
+        if os.path.exists(os.path.join(out_path, seq + '.npz')):
+            print('already done...', seq)
+            v2v_err = np.load(os.path.join(out_path, seq + '.npz'))['v2v_error']
+            all_error.append(v2v_err)
+            continue
+        obs_path =  os.path.join(data_dir, seq, 'observations.npz')
+        if os.path.exists(obs_path):
+            v2v_err = main(opt, args.ckpt_path,obs_path, gt_data= os.path.join(data_dir, seq, 'gt_results.npz'),out_path=out_path, seq=seq, bm_dir_path=args.bm_dir_path, render=args.render)
+            all_error.append(v2v_err)
+    print( np.mean(np.array(all_error)))
+   

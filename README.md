@@ -81,10 +81,11 @@ outpath_folder: save rendered initial and projected pose.
 
 
 ### Motion denoising
-     python experiment/motion_denoise.py --config=configs/amass.yaml  --motion_data=<motion data folder> --ckpt_path={}  --outpath_folder={}
+     python experiment/motion_denoise.py --config=configs/amass.yaml  --motion_data=<motion data folder> --ckpt_path={}  --outpath_folder={} --bm_dir_path={}
 
   
 Motion data file is .npz file which contains "body_pose", "betas", "root_orient". This is generated using: https://github.com/davrempe/humor/tree/main/humor/datasets
+bm_dir_path: path to SMPL body model
 
 ### Image based 3d pose estimation
      1. Run openpose to generate 2d keypoints for given image(https://github.com/CMU-Perceptual-Computing-Lab/openpose).
