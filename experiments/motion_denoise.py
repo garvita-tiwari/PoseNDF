@@ -67,9 +67,6 @@ class MotionDenoise(object):
         init_joints = torch.from_numpy(smpl_init.Jtr.detach().cpu().numpy().astype(np.float32)).to(device=self.device)
         init_verts = torch.from_numpy(smpl_init.vertices.detach().cpu().numpy().astype(np.float32)).to(device=self.device)
 
-        v2v_error = smpl_init.vertices - smpl_gt.vertices
-        v2v_error = torch.mean(torch.sqrt(torch.sum(v2v_error*v2v_error, dim=2)))*100.
-        print('initial error...', v2v_error)
         # Optimizer
         smpl_init.body_pose.requires_grad= True
         smpl_init.betas.requires_grad = True
@@ -225,4 +222,4 @@ if __name__ == '__main__':
     # all_err = [np.sum(np.array(all_results[data])) for data in [datas[4]]]
     # all_len = [len(all_results[data]) for data in [datas[4]]]
     # print(np.sum(all_err)/np.sum(all_len))
-    np.savez('/BS/humanpose/static00/experiments/humor_old/results/posendf_table_first_order.npz', **all_results)
+    #np.savez('/BS/humanpose/static00/experiments/humor_old/results/posendf_table_first_order.npz', **all_results)
