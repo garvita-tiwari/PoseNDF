@@ -22,6 +22,10 @@ Please creae posendf environment using one of these:
     conda install jupyter
     pip install scikit-image matplotlib imageio plotly opencv-python
     pip install trimesh
+    pip install tensorboard
+    pip install ipdb
+    pip install smplx
+    pip install chumpy
   
 ### Install pytorch3d and faiss-gpu
     conda install pytorch3d -c pytorch3d
